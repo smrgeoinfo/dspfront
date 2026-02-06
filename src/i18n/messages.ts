@@ -3,13 +3,13 @@
 export const messages = {
   en: {
     portalName: `Data Submission Portal`,
-    logo: `CZN_Logo.png`, // Must be placed inside `/src/assets/img/` directory
+    logo: `ieda_logo.png`, // Must be placed inside `/public/img/` directory
     portalNameShort: `DSP`,
     hubName: `CZ Hub`,
     home: {
       banner: {
-        title: `Critical Zone Collaborative Network`,
-        subtitle: `Data Submission Portal`,
+        title: `Earth Science Data Submission Portal`,
+        subtitle: ``,
         portalLinkHint: `Looking for CZNet data?`,
         portalLinkText: `Visit our data discovery portal`,
       },

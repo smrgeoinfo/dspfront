@@ -14,12 +14,8 @@
         }"
       >
         <div class="has-text-shadow">
-          <div class="has-text-white text-h3">
+          <div class="has-text-white text-h2 font-weight-bold">
             {{ $t("home.banner.title") }}
-          </div>
-
-          <div class="has-text-white mt-4 text-h4">
-            {{ $t("home.banner.subtitle") }}
           </div>
         </div>
         <template v-if="!isLoggedIn">
@@ -32,14 +28,6 @@
             </v-btn>
           </div>
         </template>
-        <div class="mt-16">
-          <div class="has-text-shadow has-text-white text-h6 mb-2">
-            {{ $t("home.banner.portalLinkHint") }}
-          </div>
-          <v-btn color="white" :href="discoverySiteUrl">
-            {{ $t("home.banner.portalLinkText") }}
-          </v-btn>
-        </div>
       </v-container>
     </v-parallax>
 
