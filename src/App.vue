@@ -206,6 +206,7 @@ import { addRouteTags } from '~/modules/router'
 import { EnumRepositoryKeys } from './components/submissions/types'
 import { DEFAULT_TOAST_DURATION, DISCOVERY_SITE_URL } from './constants'
 import { hasLoggedInGuard } from './guards'
+import Ada from './models/ada.model'
 import EarthChem from './models/earthchem.model'
 import External from './models/external.model'
 import HydroShare from './models/hydroshare.model'
@@ -423,6 +424,7 @@ class App extends Vue {
       EarthChem.init(),
       // Zenodo.init(),
       External.init(),
+      Ada.init(),
     ])
   }
 

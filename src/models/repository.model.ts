@@ -367,6 +367,9 @@ export default class Repository extends Model implements IRepository {
           case EnumRepositoryKeys.external:
             identifier = response.data.metadata.identifier
             break
+          case EnumRepositoryKeys.ada:
+            identifier = response.data.metadata.identifier
+            break
         }
 
         return {

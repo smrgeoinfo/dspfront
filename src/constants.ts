@@ -1,5 +1,6 @@
 import type Repository from './models/repository.model'
 import { EnumRepositoryKeys } from './components/submissions/types'
+import Ada from './models/ada.model'
 import EarthChem from './models/earthchem.model'
 import External from './models/external.model'
 import HydroShare from './models/hydroshare.model'
@@ -32,6 +33,8 @@ export function getRepositoryFromKey(
       return EarthChem
     case EnumRepositoryKeys.external:
       return External
+    case EnumRepositoryKeys.ada:
+      return Ada
   }
 }
 
@@ -40,4 +43,5 @@ export const supportedRepositoryModels: { [key: string]: typeof Repository } = {
   [EnumRepositoryKeys.earthchem]: EarthChem,
   [EnumRepositoryKeys.zenodo]: Zenodo,
   [EnumRepositoryKeys.external]: External,
+  [EnumRepositoryKeys.ada]: Ada,
 }

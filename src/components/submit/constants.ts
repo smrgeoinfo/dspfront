@@ -237,4 +237,16 @@ export const repoMetadata: { [key: string]: IRepository } = {
     submitTooltip: 'Submit data to HydroLearn.',
     url: 'https://www.hydrolearn.org/',
   },
+  [EnumRepositoryKeys.ada]: {
+    key: EnumRepositoryKeys.ada,
+    name: 'Astromat Data Archive (ADA)',
+    dropdownName: 'ADA Datasets',
+    logoSrc: '/img/ada.png',
+    description:
+      'The Astromat Data Archive (ADA) preserves and provides access to analytical data from astromaterials research including meteorites, cosmic dust, and returned samples. ADA supports detailed instrument-specific metadata for a wide range of analytical techniques.',
+    isSupported: { registration: false, form: true },
+    isExternal: true,
+    submitTooltip: 'Submit an ADA product metadata record.',
+    url: 'https://www.astromat.org/',
+  },
 }

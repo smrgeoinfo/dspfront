@@ -1,4 +1,5 @@
 import VuexORM from '@vuex-orm/core'
+import Ada from './ada.model'
 import EarthChem from './earthchem.model'
 import External from './external.model'
 // import Zenodo from './zenodo.model'
@@ -21,5 +22,6 @@ db.register(Repository)
 db.register(HydroShare)
 db.register(EarthChem)
 db.register(External)
+db.register(Ada)
 
 export const orm = db
