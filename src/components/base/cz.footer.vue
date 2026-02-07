@@ -5,7 +5,7 @@
   >
     <div class="d-lg-flex justify-space-between full-width">
       <div class="mb-4">
-        <div class="mb-2 text-h6">
+        <div class="text-h6">
           Contact Us
         </div>
         <p>
@@ -24,12 +24,12 @@
           }}</a>
         </p>
         <p>
-          Visit <a href="https://www.cuahsi.org/" target="_blank">cuahsi.org</a>
+          Visit <a href="https://www.iedadata.org/" target="_blank">iedadata.org</a>
         </p>
       </div>
 
       <div class="mb-4">
-        <div class="mb-2 text-h6">
+        <div class="text-h6">
           Get Started
         </div>
 
@@ -43,7 +43,7 @@
       </div>
 
       <div>
-        <div class="mb-2 text-h6">
+        <div class="text-h6">
           Open Source
         </div>
         <p>
@@ -60,14 +60,9 @@
 
     <v-divider />
 
-    <div class="text-center d-flex flex-column align-center mt-4">
+    <div class="mt-4 full-width">
       <p>
-        (c) {{ year }} CUAHSI. This material is based upon work supported by
-        the National Science Foundation (NSF) under awards 2012893, 2012593, and
-        2012748.<br>
-        Any opinions, findings, conclusions, or recommendations expressed in
-        this material are those of the authors and do not necessarily reflect
-        the views of the NSF.
+        (c) {{ year }} IEDA. Original code base development supported by the National Science Foundation (NSF) under awards 2012893, 2012593, and 2012748. Any opinions, findings, conclusions, or recommendations expressed in this material are those of the authors and do not necessarily reflect the views of the NSF.
       </p>
     </div>
   </v-container>
@@ -107,6 +102,6 @@ export default toNative(CzFooter)
 }
 
 p {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0;
 }
 </style>

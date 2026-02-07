@@ -24,6 +24,26 @@
       <p class="text-body-1">
         {{ $t("about.body[1]") }}
       </p>
+
+      <v-divider class="my-4" />
+
+      <div class="text-h5 mb-2">
+        {{ $t("home.submitData.title") }}
+      </div>
+      <p class="text-body-1">
+        {{ $t("about.body[2]") }}
+      </p>
+
+      <v-list lines="two" class="mt-2">
+        <v-list-item
+          v-for="(feature, i) in 3"
+          :key="i"
+          :prepend-icon="'mdi-checkbox-marked-circle-outline'"
+        >
+          <v-list-item-title>{{ $t(`about.portalFeatures[${i}].title`) }}</v-list-item-title>
+          <v-list-item-subtitle class="text-wrap">{{ $t(`about.portalFeatures[${i}].description`) }}</v-list-item-subtitle>
+        </v-list-item>
+      </v-list>
     </v-container>
   </v-container>
 </template>

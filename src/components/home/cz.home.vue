@@ -3,7 +3,7 @@
     <v-parallax
       class="text-center"
       src="/img/bg-3.jpg"
-      :height="isLoggedIn ? 450 : 650"
+      :height="isLoggedIn ? 300 : 400"
       :scale="1"
     >
       <v-container
@@ -31,118 +31,59 @@
       </v-container>
     </v-parallax>
 
-    <section>
-      <div>
-        <div class="text-center d-flex flex-column align-center">
-          <div class="mb-4 text-h4">
-            {{ $t("home.submitData.title") }}
-          </div>
-          <p class="font-weight-light text-center text-subtitle-1">
-            {{ $t("home.submitData.description") }}
-          </p>
-        </div>
-
-        <v-row id="features-1" justify="center" align="baseline" class="mt-4">
-          <v-col
-            class="d-flex align-center align-md-start flex-md-row flex-column"
-          >
-            <v-icon>mdi-checkbox-marked-circle-outline</v-icon>
-            <div class="text-md-left text-center">
-              <div class="text-h6">
-                {{ $t("home.submitData.points[0].title") }}
-              </div>
-              <p class="font-weight-light text-subtitle-1">
-                {{ $t("home.submitData.points[0].description") }}
-              </p>
-            </div>
-          </v-col>
-
-          <v-col
-            class="d-flex align-center align-md-start flex-md-row flex-column"
-          >
-            <v-icon>mdi-checkbox-marked-circle-outline</v-icon>
-            <div class="text-md-left text-center">
-              <div class="text-h6">
-                {{ $t("home.submitData.points[1].title") }}
-              </div>
-              <p class="font-weight-light text-subtitle-1">
-                {{ $t("home.submitData.points[1].description") }}
-              </p>
-            </div>
-          </v-col>
-
-          <v-col
-            class="d-flex align-center align-md-start flex-md-row flex-column"
-          >
-            <v-icon>mdi-checkbox-marked-circle-outline</v-icon>
-            <div class="text-md-left text-center">
-              <div class="text-h6">
-                {{ $t("home.submitData.points[2].title") }}
-              </div>
-              <p class="font-weight-light text-subtitle-1">
-                {{ $t("home.submitData.points[2].description") }}
-              </p>
-            </div>
-          </v-col>
-        </v-row>
-      </div>
-    </section>
-
-    <v-divider />
-
-    <section class="text-center">
+    <section id="action-cards" class="text-center">
       <div class="mb-4 text-h4">
         What do you want to do?
       </div>
-      <v-row id="features-2" justify="center">
-        <v-col>
-          <v-btn size="100" flat icon="mdi-book-plus" :to="{ path: '/submit' }" />
-
-          <router-link
-            to="/submit"
-            class="text-h6"
-          >
-            <div class="my-2">
-              Submit Data Products
+      <v-row justify="center">
+        <v-col cols="12" md="6">
+          <router-link to="/metadata/ada" class="action-link d-flex align-center pa-4 rounded">
+            <v-icon class="action-icon flex-shrink-0 mr-4">mdi-flask-outline</v-icon>
+            <div class="text-left">
+              <div class="text-h6">{{ $t("home.actions.createMetadata.label") }}</div>
+              <div class="font-weight-light text-subtitle-1">{{ $t("home.actions.createMetadata.description") }}</div>
             </div>
           </router-link>
-
-          <div class="font-weight-light text-subtitle-1">
-            Assemble your data files and metadata using our templates and submit
-            directly to a supported repository.
-          </div>
         </v-col>
 
-        <v-col>
-          <v-btn size="100" flat icon="mdi-arrow-decision" :to="{ path: '/resources/recommendations' }" />
-          <router-link
-            to="/resources/recommendations"
-            class="text-h6"
-          >
-            <div class="my-2">
-              Find the Right Repository
+        <v-col cols="12" md="6">
+          <router-link to="/submit" class="action-link d-flex align-center pa-4 rounded">
+            <v-icon class="action-icon flex-shrink-0 mr-4">mdi-book-plus</v-icon>
+            <div class="text-left">
+              <div class="text-h6">{{ $t("home.actions.submitData.label") }}</div>
+              <div class="font-weight-light text-subtitle-1">{{ $t("home.actions.submitData.description") }}</div>
             </div>
           </router-link>
-
-          <div class="font-weight-light text-subtitle-1">
-            Don't know which repository to use? Use our repository
-            recommendation system to decide which repository is the best place
-            for your data.
-          </div>
         </v-col>
 
-        <v-col>
-          <v-btn size="100" flat icon="mdi-test-tube" href="https://www.geosamples.org/" target="_blank" />
-          <a
-            href="https://www.geosamples.org/"
-            target="_blank"
-            class="text-h6 d-block my-2"
-          >Register Samples
+        <v-col cols="12" md="6">
+          <router-link to="/resources/recommendations" class="action-link d-flex align-center pa-4 rounded">
+            <v-icon class="action-icon flex-shrink-0 mr-4">mdi-arrow-decision</v-icon>
+            <div class="text-left">
+              <div class="text-h6">{{ $t("home.actions.findRepo.label") }}</div>
+              <div class="font-weight-light text-subtitle-1">{{ $t("home.actions.findRepo.description") }}</div>
+            </div>
+          </router-link>
+        </v-col>
+
+        <v-col cols="12" md="6">
+          <router-link to="/metadata/cdif" class="action-link d-flex align-center pa-4 rounded">
+            <v-icon class="action-icon flex-shrink-0 mr-4">mdi-database-plus</v-icon>
+            <div class="text-left">
+              <div class="text-h6">{{ $t("home.actions.registerDataset.label") }}</div>
+              <div class="font-weight-light text-subtitle-1">{{ $t("home.actions.registerDataset.description") }}</div>
+            </div>
+          </router-link>
+        </v-col>
+
+        <v-col cols="12" md="6">
+          <a href="https://www.geosamples.org/" target="_blank" class="action-link d-flex align-center pa-4 rounded">
+            <v-icon class="action-icon flex-shrink-0 mr-4">mdi-test-tube</v-icon>
+            <div class="text-left">
+              <div class="text-h6">{{ $t("home.actions.registerSamples.label") }}</div>
+              <div class="font-weight-light text-subtitle-1">{{ $t("home.actions.registerSamples.description") }}</div>
+            </div>
           </a>
-
-          <div class="font-weight-light text-subtitle-1">
-            Register metadata for samples and get an IGSN to make samples more discoverable, accessible, and reusable.
-          </div>
         </v-col>
       </v-row>
     </section>
@@ -287,7 +228,7 @@ p {
 }
 
 section {
-  padding: 4rem;
+  padding: 3rem;
 }
 
 :deep(.v-parallax__content) {
@@ -298,30 +239,20 @@ section {
   color: rgba(0, 0, 0, 0.54) !important;
 }
 
-#features-1 {
-  .v-icon {
-    flex: 0;
-    margin: 0;
-    font-size: 5rem;
-    margin-right: 1rem;
+#action-cards {
+  .action-link {
+    text-decoration: none;
+    color: inherit;
+    transition: background-color 0.2s ease;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
   }
 
-  & > div {
-    flex-basis: 30rem;
-    flex-grow: 0;
-    padding: 2rem;
-  }
-}
-
-#features-2 {
-  & > div {
-    flex-basis: 30rem;
-    flex-grow: 0;
-    padding: 1rem;
-  }
-
-  :deep(.v-icon) {
-    font-size: 5rem;
+  .action-icon {
+    font-size: 3rem;
     color: rgba(0, 0, 0, 0.54);
   }
 }

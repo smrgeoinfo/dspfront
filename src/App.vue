@@ -294,19 +294,41 @@ class App extends Vue {
       label: 'Submit Data',
       icon: 'mdi-book-plus',
       isActive: () => {
-        return ['submit', 'submit.repository', 'register'].includes(this.route?.name?.toString() || '')
+        return ['submit', 'submit.repository'].includes(this.route?.name?.toString() || '')
       },
     },
     {
-      attrs: { href: DISCOVERY_SITE_URL },
-      label: 'Discover Data',
-      icon: 'mdi-card-search',
-      isExternal: true,
+      attrs: { to: '/metadata/ada' },
+      label: 'Create Metadata',
+      icon: 'mdi-flask-outline',
+      isActive: () => {
+        return ['metadata-ada', 'metadata-ada-profile'].includes(this.route?.name?.toString() || '')
+      },
     },
-    { attrs: { to: '/about' }, label: 'About', icon: 'mdi-help', isActive: () => {
-      return this.route?.name === 'about'
-    } },
-
+    {
+      attrs: { to: '/metadata/cdif' },
+      label: 'Register Dataset',
+      icon: 'mdi-database-plus',
+      isActive: () => {
+        return this.route?.name === 'metadata-cdif'
+      },
+    },
+    {
+      attrs: { to: '/resources/recommendations' },
+      label: 'Find Repository',
+      icon: 'mdi-arrow-decision',
+      isActive: () => {
+        return this.route?.name === 'recommendations'
+      },
+    },
+    {
+      attrs: { to: '/about' },
+      label: 'About',
+      icon: 'mdi-help',
+      isActive: () => {
+        return this.route?.name === 'about'
+      },
+    },
     {
       attrs: { to: '/contact' },
       label: 'Contact',

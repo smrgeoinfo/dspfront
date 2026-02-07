@@ -2,6 +2,7 @@ import type { EnumRepositoryKeys } from '~/components/submissions/types'
 import { supportedRepositoryModels } from '~/constants'
 import Repository from '~/models/repository.model'
 import External from '~/models/external.model'
+import Ada from '~/models/ada.model'
 
 /**
  * Returns whether the repository has been authorized or not.
@@ -16,6 +17,7 @@ export function isRepositoryAuthorized(
   if (
     activeRepository
     && activeRepository !== External
+    && activeRepository !== Ada
     && !activeRepository?.$state.accessToken
   ) {
     if (promptAuthorize)
