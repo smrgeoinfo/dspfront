@@ -173,6 +173,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import User from '~/models/user.model'
 import { hasUnsavedChangesGuard } from '~/guards'
+import { fetchUserInfo, populateMaintainer, populateOnLoad, populateOnSave } from '~/services/catalog'
 
 const CATALOG_API = '/api/catalog'
 
@@ -286,6 +287,9 @@ class GeodatAdaProfileForm extends Vue {
       this.uischema = resp.data.uischema
       this.data = resp.data.defaults
 
+      // Populate required metadata fields with initial values
+      populateOnLoad(this.data)
+
       // If editing an existing record, load it
       const recordParam = this.route.query.record as string
       if (recordParam) {
@@ -295,6 +299,15 @@ class GeodatAdaProfileForm extends Vue {
         this.data = recordResp.data.jsonld
         this.recordId = recordResp.data.id
         this.identifier = recordResp.data.identifier
+      }
+
+      // Auto-populate maintainer with logged-in user info (new records only)
+      if (!recordParam && User.$state.isLoggedIn) {
+        const userInfo = await fetchUserInfo()
+        if (userInfo) {
+          populateMaintainer(this.data, userInfo)
+          this.data = { ...this.data }
+        }
       }
     }
     catch (e: any) {
@@ -357,6 +370,9 @@ class GeodatAdaProfileForm extends Vue {
     this.isSaving = true
 
     try {
+      // Auto-populate @id, schema:about, and schema:sdDatePublished
+      await populateOnSave(this.data)
+
       const url = this.recordId
         ? `${CATALOG_API}/records/${this.recordId}/`
         : `${CATALOG_API}/records/`

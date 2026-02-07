@@ -84,7 +84,7 @@
                       variant="elevated"
                       elevation="1"
                       size="default"
-                      @click="openRegisterDatasetDialog"
+                      @click="router.push({ path: '/metadata/cdif' })"
                     >
                       {{ externalRepoMetadata?.name }}
                     </v-btn>

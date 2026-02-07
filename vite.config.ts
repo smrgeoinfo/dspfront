@@ -129,6 +129,11 @@ export default defineConfig({
     host: true,
     port: 8080,
     proxy: {
+      '/api/catalog': {
+        target: 'https://localhost',
+        secure: false,
+        changeOrigin: true,
+      },
       '/sockjs-node': {
         target: 'ws://127.0.0.1:8081',
         ws: true,
