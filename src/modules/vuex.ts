@@ -15,7 +15,7 @@ export const install: UserModule = ({ app }) => {
       VuexORM.install(orm),
       createPersistedState({
         paths: persistedPaths,
-        key: `CZ Hub`,
+        key: `IEDA Hub`,
       }),
     ],
     // state() {

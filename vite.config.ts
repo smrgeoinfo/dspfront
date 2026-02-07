@@ -72,8 +72,8 @@ export default defineConfig({
         navigateFallbackDenylist: [/^\/api/, /^\/openapi.json/, /^\/docs/, /^\/redoc/],
       },
       manifest: {
-        name: 'CZ Hub',
-        short_name: 'CZ Hub',
+        name: 'IEDA Hub',
+        short_name: 'IEDA Hub',
         theme_color: '#ffffff',
         icons: [
           {
