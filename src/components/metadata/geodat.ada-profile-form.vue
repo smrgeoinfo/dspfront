@@ -1,5 +1,5 @@
 <template>
-  <v-container class="cz-ada-profile-form px-4">
+  <v-container class="geodat-ada-profile-form px-4">
     <h1 class="text-h4">
       {{ formTitle }}
     </h1>
@@ -174,17 +174,15 @@ import axios from 'axios'
 import User from '~/models/user.model'
 import { hasUnsavedChangesGuard } from '~/guards'
 
-// TODO: Switch to GitHub Pages URL for production
-// const BB_BASE_URL = 'https://smrgeoinfo.github.io/OCGbuildingBlockTest/build/jsonforms/profiles'
-const BB_BASE_URL = 'http://localhost:8090/profiles'
+const CATALOG_API = '/api/catalog'
 
 @Component({
-  name: 'cz-ada-profile-form',
+  name: 'geodat-ada-profile-form',
   components: {
     CzForm,
   },
 })
-class CzAdaProfileForm extends Vue {
+class GeodatAdaProfileForm extends Vue {
   route = useRoute()
   router = useRouter()
 
@@ -201,6 +199,8 @@ class CzAdaProfileForm extends Vue {
   identifier = ''
   activeTab = 0
   tabValidity: boolean[] = []
+  profileId: number | null = null
+  recordId: string | null = null
 
   get config() {
     return {
@@ -280,20 +280,26 @@ class CzAdaProfileForm extends Vue {
     this.errorMessage = ''
 
     try {
-      const baseUrl = `${BB_BASE_URL}/${this.profileKey}`
-      const [schemaResp, uischemaResp, defaultsResp] = await Promise.all([
-        axios.get(`${baseUrl}/schema.json`),
-        axios.get(`${baseUrl}/uischema.json`),
-        axios.get(`${baseUrl}/defaults.json`),
-      ])
+      const resp = await axios.get(`${CATALOG_API}/profiles/${this.profileKey}/`)
+      this.profileId = resp.data.id
+      this.schema = resp.data.schema
+      this.uischema = resp.data.uischema
+      this.data = resp.data.defaults
 
-      this.schema = schemaResp.data
-      this.uischema = uischemaResp.data
-      this.data = defaultsResp.data
+      // If editing an existing record, load it
+      const recordParam = this.route.query.record as string
+      if (recordParam) {
+        const recordResp = await axios.get(`${CATALOG_API}/records/${recordParam}/`, {
+          params: { access_token: User.$state.orcidAccessToken },
+        })
+        this.data = recordResp.data.jsonld
+        this.recordId = recordResp.data.id
+        this.identifier = recordResp.data.identifier
+      }
     }
     catch (e: any) {
       console.error('Failed to load schemas:', e)
-      this.errorMessage = `Failed to load form schema for profile "${this.profileKey}". Please try again later.`
+      this.errorMessage = `Failed to load form schema for profile "${this.profileKey}".`
     }
     finally {
       this.isLoading = false
@@ -351,17 +357,23 @@ class CzAdaProfileForm extends Vue {
     this.isSaving = true
 
     try {
-      const response = await axios.post(
-        '/api/metadata/ada/jsonld',
-        this.data,
-        {
-          headers: { 'Content-Type': 'application/json' },
-          params: { access_token: User.$state.orcidAccessToken },
-        },
-      )
+      const url = this.recordId
+        ? `${CATALOG_API}/records/${this.recordId}/`
+        : `${CATALOG_API}/records/`
+      const method = this.recordId ? 'patch' : 'post'
 
-      if (response.status === 201) {
-        this.identifier = response.data.metadata?.identifier
+      const response = await axios[method](url, {
+        profile: this.profileId,
+        jsonld: this.data,
+        ...(this.recordId ? {} : { status: 'draft' }),
+      }, {
+        headers: { 'Content-Type': 'application/json' },
+        params: { access_token: User.$state.orcidAccessToken },
+      })
+
+      if (response.status === 201 || response.status === 200) {
+        this.recordId = response.data.id
+        this.identifier = response.data.identifier
         this.hasUnsavedChanges = false
         this.errorMessage = ''
         this.validationErrors = []
@@ -376,9 +388,9 @@ class CzAdaProfileForm extends Vue {
     }
     catch (e: any) {
       console.error('Failed to save:', e)
-      if (e.response?.status === 422 && e.response?.data?.errors) {
-        this.errorMessage = e.response.data.detail || 'Validation failed'
-        this.validationErrors = e.response.data.errors
+      if (e.response?.status === 400 && e.response?.data?.jsonld) {
+        this.errorMessage = 'Validation failed'
+        this.validationErrors = e.response.data.jsonld
       }
       else {
         this.errorMessage = ''
@@ -404,17 +416,17 @@ class CzAdaProfileForm extends Vue {
   }
 }
 
-export default toNative(CzAdaProfileForm)
+export default toNative(GeodatAdaProfileForm)
 </script>
 
 <style lang="scss" scoped>
-.cz-ada-profile-form {
+.geodat-ada-profile-form {
   max-width: 1200px;
 }
 </style>
 
 <style lang="scss">
-.cz-ada-profile-form {
+.geodat-ada-profile-form {
   // Reduce vertical margin between group panels (v-card.cz-group.my-5)
   .cz-group.my-5 {
     margin-top: 8px !important;
@@ -432,6 +444,14 @@ export default toNative(CzAdaProfileForm)
   .v-input__details {
     min-height: 16px;
     padding-top: 2px;
+  }
+  // Smaller description/hint text under fields
+  .v-messages,
+  .v-messages__message,
+  .message--text {
+    font-size: 0.7rem !important;
+    line-height: 1.0 !important;
+    margin-bottom: 6px !important;
   }
   // Compact layout items
   .vertical-layout-item,

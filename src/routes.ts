@@ -1,11 +1,11 @@
 import type { RouteRecordRaw } from 'vue-router'
-import { hasAccessTokenGuard, hasLoggedInGuard } from './guards'
-import CzFooter from '~/components/base/cz.footer.vue'
-import CzHome from '~/components/home/cz.home.vue'
 import CzAbout from '~/components/about/cz.about.vue'
 import CzFooter from '~/components/base/cz.footer.vue'
 import CzContact from '~/components/contact/cz.contact.vue'
 import CzHome from '~/components/home/cz.home.vue'
+import CzAdaProfileForm from '~/components/metadata/geodat.ada-profile-form.vue'
+import CzCdifForm from '~/components/metadata/geodat.cdif-form.vue'
+import CzAdaSelectType from '~/components/metadata/geodat.ada-select-type.vue'
 import CzNewSubmission from '~/components/new-submission/cz.new-submission.vue'
 import CzAccount from '~/components/profile/cz.account.vue'
 import CzAuthorizedRepositories from '~/components/profile/cz.authorized-repositories.vue'
@@ -14,10 +14,8 @@ import CzQuickStartGuide from '~/components/quick-start-guide/cz.quick-start-gui
 import CzRecomendationsQuestionnaire from '~/components/recommendations/cz.recommendations-questionnaire.vue'
 import CzRegisterDataset from '~/components/register-dataset/cz.register-dataset.vue'
 import CzResources from '~/components/resources/cz.resources.vue'
-import CzSubmissions from '~/components/submissions/cz.submissions.vue'
-
+import CzSubmissions from '~/components/submissions/geodat.submissions.vue'
 import CzSubmit from '~/components/submit/cz.submit.vue'
-
 import { hasAccessTokenGuard, hasLoggedInGuard, hasUnsavedChangesGuard } from './guards'
 
 export const routes: RouteRecordRaw[] = [
@@ -128,14 +126,7 @@ export const routes: RouteRecordRaw[] = [
   {
     name: 'register',
     path: '/register',
-    components: {
-      content: CzRegisterDataset,
-      footer: CzFooter,
-    },
-    beforeEnter: [hasLoggedInGuard, hasAccessTokenGuard],
-    meta: {
-      title: 'Register Dataset',
-    },
+    redirect: { name: 'metadata-cdif' },
   },
   {
     name: 'submit',
@@ -163,6 +154,41 @@ export const routes: RouteRecordRaw[] = [
         beforeEnter: [hasLoggedInGuard, hasAccessTokenGuard],
       },
     ],
+  },
+  {
+    name: 'metadata-ada',
+    path: '/metadata/ada',
+    components: {
+      content: CzAdaSelectType,
+      footer: CzFooter,
+    },
+    meta: {
+      title: 'Create Geochemical Metadata',
+    },
+  },
+  {
+    name: 'metadata-ada-profile',
+    path: '/metadata/ada/:profile',
+    components: {
+      content: CzAdaProfileForm,
+      footer: CzFooter,
+    },
+    beforeEnter: [hasLoggedInGuard],
+    meta: {
+      title: 'ADA Metadata Form',
+    },
+  },
+  {
+    name: 'metadata-cdif',
+    path: '/metadata/cdif',
+    components: {
+      content: CzCdifForm,
+      footer: CzFooter,
+    },
+    beforeEnter: [hasLoggedInGuard],
+    meta: {
+      title: 'Register Dataset',
+    },
   },
   {
     name: 'contact',

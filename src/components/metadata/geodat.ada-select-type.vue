@@ -1,5 +1,5 @@
 <template>
-  <v-container class="cz-ada-select-type py-8">
+  <v-container class="geodat-ada-select-type py-8">
     <div class="text-center mb-2">
       <div class="text-h4 mb-4">
         {{ $t("metadata.ada.title") }}
@@ -21,16 +21,21 @@
       style="max-width: 30rem; margin-inline: auto"
     />
 
+    <div v-if="isLoading" class="d-flex justify-center mt-8">
+      <v-progress-circular indeterminate color="primary" />
+    </div>
+
     <v-list
+      v-else
       class="profile-list mx-auto"
       lines="two"
     >
       <!-- General product (always first, unless filtered out) -->
       <v-list-item
-        v-if="showGeneral"
+        v-if="showGeneral && generalProfile"
         :key="generalProfile.key"
-        :title="$t(`metadata.ada.profiles.${generalProfile.key}.name`)"
-        :subtitle="$t(`metadata.ada.profiles.${generalProfile.key}.description`)"
+        :title="getProfileName(generalProfile.key)"
+        :subtitle="getProfileDescription(generalProfile.key)"
         @click="selectProfile(generalProfile.key)"
       >
         <template #prepend>
@@ -53,8 +58,8 @@
         <v-list-item
           v-for="profile in filteredMethods"
           :key="profile.key"
-          :title="$t(`metadata.ada.profiles.${profile.key}.name`)"
-          :subtitle="$t(`metadata.ada.profiles.${profile.key}.description`)"
+          :title="getProfileName(profile.key)"
+          :subtitle="getProfileDescription(profile.key)"
           @click="selectProfile(profile.key)"
         >
           <template #prepend>
@@ -82,34 +87,74 @@
 <script lang="ts">
 import { Component, toNative, Vue } from 'vue-facing-decorator'
 import { useRouter } from 'vue-router'
+import axios from 'axios'
 
 @Component({
-  name: 'cz-ada-select-type',
+  name: 'geodat-ada-select-type',
   components: {},
 })
-class CzAdaSelectType extends Vue {
+class GeodatAdaSelectType extends Vue {
   router = useRouter()
   search = ''
+  isLoading = false
 
-  generalProfile = { key: 'adaProduct' }
+  generalProfile: { key: string } | null = { key: 'adaProduct' }
 
-  methodProfiles = [
-    { key: 'adaEMPA' },
-    { key: 'adaICPMS' },
-    { key: 'adaVNMIR' },
-    { key: 'adaXRD' },
-  ]
+  methodProfiles: { key: string }[] = []
+
+  async created() {
+    this.isLoading = true
+    try {
+      const resp = await axios.get('/api/catalog/profiles/')
+      const profiles = resp.data.results
+      const general = profiles.find((p: any) => p.name === 'adaProduct')
+      if (general) {
+        this.generalProfile = { key: general.name }
+      }
+      this.methodProfiles = profiles
+        .filter((p: any) => p.base_profile === 'adaProduct')
+        .sort((a: any, b: any) => a.name.localeCompare(b.name))
+        .map((p: any) => ({ key: p.name }))
+    }
+    catch (e) {
+      console.error('Failed to load profiles:', e)
+      // Fall back to hardcoded profiles
+      this.generalProfile = { key: 'adaProduct' }
+      this.methodProfiles = [
+        { key: 'adaEMPA' },
+        { key: 'adaICPMS' },
+        { key: 'adaVNMIR' },
+        { key: 'adaXRD' },
+      ]
+    }
+    finally {
+      this.isLoading = false
+    }
+  }
+
+  getProfileName(profileKey: string): string {
+    const i18nKey = `metadata.ada.profiles.${profileKey}.name`
+    const translated = this.$t(i18nKey) as string
+    // If i18n returns the key itself, fall back to the profile key
+    return translated !== i18nKey ? translated : profileKey
+  }
+
+  getProfileDescription(profileKey: string): string {
+    const i18nKey = `metadata.ada.profiles.${profileKey}.description`
+    const translated = this.$t(i18nKey) as string
+    return translated !== i18nKey ? translated : ''
+  }
 
   matchesSearch(profileKey: string): boolean {
     if (!this.search) return true
     const q = this.search.toLowerCase()
-    const name = (this.$t(`metadata.ada.profiles.${profileKey}.name`) as string).toLowerCase()
-    const desc = (this.$t(`metadata.ada.profiles.${profileKey}.description`) as string).toLowerCase()
+    const name = this.getProfileName(profileKey).toLowerCase()
+    const desc = this.getProfileDescription(profileKey).toLowerCase()
     return name.includes(q) || desc.includes(q)
   }
 
   get showGeneral(): boolean {
-    return this.matchesSearch(this.generalProfile.key)
+    return !!this.generalProfile && this.matchesSearch(this.generalProfile.key)
   }
 
   get filteredMethods() {
@@ -121,11 +166,11 @@ class CzAdaSelectType extends Vue {
   }
 }
 
-export default toNative(CzAdaSelectType)
+export default toNative(GeodatAdaSelectType)
 </script>
 
 <style lang="scss" scoped>
-.cz-ada-select-type {
+.geodat-ada-select-type {
   max-width: 800px;
 }
 
