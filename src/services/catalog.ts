@@ -120,6 +120,14 @@ export function populateOnLoad(data: any): void {
   // Set sdDatePublished to today
   if (!subjectOf['schema:sdDatePublished'])
     subjectOf['schema:sdDatePublished'] = new Date().toISOString().split('T')[0]
+
+  // Set _distributionType from @type for each distribution item
+  for (const dist of data['schema:distribution'] || []) {
+    if (dist && typeof dist === 'object' && !dist._distributionType) {
+      const types = Array.isArray(dist['@type']) ? dist['@type'] : [dist['@type']]
+      dist._distributionType = types.includes('schema:WebAPI') ? 'Web API' : 'Data Download'
+    }
+  }
 }
 
 /**
