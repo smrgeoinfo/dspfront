@@ -136,6 +136,12 @@ export function populateOnLoad(data: any): void {
       // Unwrap encodingFormat array to single string for form binding
       if (Array.isArray(dist['schema:encodingFormat']))
         dist['schema:encodingFormat'] = dist['schema:encodingFormat'][0] || ''
+
+      // Unwrap hasPart items' encodingFormat arrays too
+      for (const part of dist['schema:hasPart'] || []) {
+        if (part && typeof part === 'object' && Array.isArray(part['schema:encodingFormat']))
+          part['schema:encodingFormat'] = part['schema:encodingFormat'][0] || ''
+      }
     }
   }
 }
