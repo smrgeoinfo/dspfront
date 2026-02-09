@@ -104,6 +104,10 @@ export function populateOnLoad(data: any): void {
   if (!data['@id'])
     data['@id'] = tempId
 
+  // Set dateModified to today if not set
+  if (!data['schema:dateModified'])
+    data['schema:dateModified'] = new Date().toISOString().split('T')[0]
+
   if (!data['schema:subjectOf'])
     data['schema:subjectOf'] = {}
 
@@ -123,9 +127,15 @@ export function populateOnLoad(data: any): void {
 
   // Set _distributionType from @type for each distribution item
   for (const dist of data['schema:distribution'] || []) {
-    if (dist && typeof dist === 'object' && !dist._distributionType) {
-      const types = Array.isArray(dist['@type']) ? dist['@type'] : [dist['@type']]
-      dist._distributionType = types.includes('schema:WebAPI') ? 'Web API' : 'Data Download'
+    if (dist && typeof dist === 'object') {
+      if (!dist._distributionType) {
+        const types = Array.isArray(dist['@type']) ? dist['@type'] : [dist['@type']]
+        dist._distributionType = types.includes('schema:WebAPI') ? 'Web API' : 'Data Download'
+      }
+
+      // Unwrap encodingFormat array to single string for form binding
+      if (Array.isArray(dist['schema:encodingFormat']))
+        dist['schema:encodingFormat'] = dist['schema:encodingFormat'][0] || ''
     }
   }
 }
