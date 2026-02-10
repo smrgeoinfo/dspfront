@@ -93,6 +93,21 @@ function extractDoi(data: any): string | null {
 }
 
 /**
+ * Generate a 32-character hex hash with '#' prefix from a variable name.
+ * Uses SHA-256, same pattern as generateRecordId.
+ */
+export async function generateVariableId(name: string): Promise<string> {
+  if (!name)
+    return ''
+  const encoder = new TextEncoder()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoder.encode(name))
+  const hex = Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+  return `#${hex.substring(0, 32)}`
+}
+
+/**
  * Auto-populate required metadata fields on form load so validation passes.
  * Sets temporary @id, schema:subjectOf.@id, schema:subjectOf.schema:about,
  * and schema:subjectOf.schema:sdDatePublished with initial values.
@@ -125,6 +140,13 @@ export function populateOnLoad(data: any): void {
   if (!subjectOf['schema:sdDatePublished'])
     subjectOf['schema:sdDatePublished'] = new Date().toISOString().split('T')[0]
 
+  // Build @id → name lookup from variableMeasured for physicalMapping unwrap
+  const varLookup: Record<string, string> = {}
+  for (const v of data['schema:variableMeasured'] || []) {
+    if (v && typeof v === 'object' && v['@id'] && v['schema:name'])
+      varLookup[v['@id']] = v['schema:name']
+  }
+
   // Set _distributionType from @type for each distribution item
   for (const dist of data['schema:distribution'] || []) {
     if (dist && typeof dist === 'object') {
@@ -142,6 +164,31 @@ export function populateOnLoad(data: any): void {
         if (part && typeof part === 'object' && Array.isArray(part['schema:encodingFormat']))
           part['schema:encodingFormat'] = part['schema:encodingFormat'][0] || ''
       }
+
+      // Unwrap cdi:formats_InstanceVariable objects to variable names in physicalMapping
+      const fd = dist.fileDetail
+      if (fd && typeof fd === 'object')
+        _unwrapPhysicalMappingVariables(fd, varLookup)
+      // Also unwrap in hasPart fileDetails
+      for (const part of dist['schema:hasPart'] || []) {
+        if (part?.fileDetail && typeof part.fileDetail === 'object')
+          _unwrapPhysicalMappingVariables(part.fileDetail, varLookup)
+      }
+    }
+  }
+}
+
+/**
+ * Unwrap cdi:formats_InstanceVariable from {"@id": "#abc"} to variable name string
+ * in all physicalMapping items within a fileDetail object.
+ * Falls back to the raw @id string if no matching variable name is found.
+ */
+function _unwrapPhysicalMappingVariables(fileDetail: any, varLookup: Record<string, string>): void {
+  for (const pm of fileDetail['cdi:hasPhysicalMapping'] || []) {
+    if (pm && typeof pm === 'object') {
+      const fiv = pm['cdi:formats_InstanceVariable']
+      if (fiv && typeof fiv === 'object' && fiv['@id'])
+        pm['cdi:formats_InstanceVariable'] = varLookup[fiv['@id']] || fiv['@id']
     }
   }
 }
@@ -177,6 +224,8 @@ export function populateMaintainer(data: any, userInfo: UserInfo): void {
  * - @id: 32-char hash of DOI or title with '#' prefix
  * - schema:subjectOf.schema:about.@id: references the generated @id
  * - schema:subjectOf.schema:sdDatePublished: current ISO date
+ * - variableMeasured items: generate @id from name if missing
+ * - physicalMapping: wrap formats_InstanceVariable string → {"@id": "..."}
  */
 export async function populateOnSave(data: any): Promise<void> {
   // Generate @id
@@ -197,4 +246,56 @@ export async function populateOnSave(data: any): Promise<void> {
 
   // Set sdDatePublished to now
   subjectOf['schema:sdDatePublished'] = new Date().toISOString().split('T')[0]
+
+  // Generate @id for variableMeasured items that don't have one
+  for (const v of data['schema:variableMeasured'] || []) {
+    if (v && typeof v === 'object' && !v['@id']) {
+      const name = v['schema:name']
+      if (name) {
+        v['@id'] = await generateVariableId(name)
+      }
+    }
+  }
+
+  // Build name → @id lookup from variableMeasured (after @ids are generated above)
+  const nameToId: Record<string, string> = {}
+  for (const v of data['schema:variableMeasured'] || []) {
+    if (v && typeof v === 'object' && v['@id'] && v['schema:name'])
+      nameToId[v['schema:name']] = v['@id']
+  }
+
+  // Wrap physicalMapping cdi:formats_InstanceVariable names back to @id objects
+  for (const dist of data['schema:distribution'] || []) {
+    if (dist && typeof dist === 'object') {
+      const fd = dist.fileDetail
+      if (fd && typeof fd === 'object')
+        _wrapPhysicalMappingVariables(fd, nameToId)
+      for (const part of dist['schema:hasPart'] || []) {
+        if (part?.fileDetail && typeof part.fileDetail === 'object')
+          _wrapPhysicalMappingVariables(part.fileDetail, nameToId)
+      }
+    }
+  }
+}
+
+/**
+ * Wrap cdi:formats_InstanceVariable from variable name to {"@id": "#abc"}
+ * in all physicalMapping items within a fileDetail object.
+ * Looks up the variable name in nameToId; if the value already looks like
+ * an @id (starts with #), uses it directly.
+ */
+function _wrapPhysicalMappingVariables(fileDetail: any, nameToId: Record<string, string>): void {
+  for (const pm of fileDetail['cdi:hasPhysicalMapping'] || []) {
+    if (pm && typeof pm === 'object') {
+      const fiv = pm['cdi:formats_InstanceVariable']
+      if (typeof fiv === 'string' && fiv) {
+        // If it's already an @id reference, use directly; otherwise look up by name
+        const id = fiv.startsWith('#') ? fiv : (nameToId[fiv] || fiv)
+        pm['cdi:formats_InstanceVariable'] = { '@id': id }
+      }
+      else if (typeof fiv === 'string') {
+        delete pm['cdi:formats_InstanceVariable']
+      }
+    }
+  }
 }

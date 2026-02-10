@@ -173,7 +173,7 @@ import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 import User from '~/models/user.model'
 import { hasUnsavedChangesGuard } from '~/guards'
-import { fetchUserInfo, populateMaintainer, populateOnLoad, populateOnSave } from '~/services/catalog'
+import { fetchUserInfo, generateVariableId, populateMaintainer, populateOnLoad, populateOnSave } from '~/services/catalog'
 
 const CATALOG_API = '/api/catalog'
 
@@ -309,6 +309,9 @@ class GeodatAdaProfileForm extends Vue {
           this.data = { ...this.data }
         }
       }
+
+      // Populate variable name dropdowns in physicalMapping
+      await this.updateVariableOptions()
     }
     catch (e: any) {
       console.error('Failed to load schemas:', e)
@@ -330,6 +333,67 @@ class GeodatAdaProfileForm extends Vue {
       this.timesChanged = this.timesChanged + 1
 
     this.hasUnsavedChanges = this.timesChanged > changesDuringInstantiation
+
+    this.updateVariableOptions()
+  }
+
+  /**
+   * Update the enum on all cdi:formats_InstanceVariable schema properties
+   * so physicalMapping dropdowns reflect the current variableMeasured names.
+   */
+  async updateVariableOptions() {
+    if (!this.schema || !this.data)
+      return
+
+    const variables: { name: string; id: string }[] = []
+    for (const v of this.data['schema:variableMeasured'] || []) {
+      if (v && typeof v === 'object' && v['schema:name']) {
+        const name = v['schema:name']
+        const id = v['@id'] || await generateVariableId(name)
+        if (!v['@id'])
+          v['@id'] = id
+        variables.push({ name, id })
+      }
+    }
+
+    if (!variables.length)
+      return
+
+    // Build enum of variable names (users see names; we convert to @id on save)
+    const nameEnum = variables.map(v => v.name)
+
+    // Deep-walk schema to find all cdi:formats_InstanceVariable properties and set enum
+    this._setFormatsVariableEnum(this.schema, nameEnum)
+  }
+
+  /**
+   * Recursively walk the JSON Schema tree and set enum on any
+   * cdi:formats_InstanceVariable string property.
+   */
+  _setFormatsVariableEnum(node: any, enumValues: string[]) {
+    if (!node || typeof node !== 'object')
+      return
+    if (Array.isArray(node)) {
+      for (const item of node)
+        this._setFormatsVariableEnum(item, enumValues)
+      return
+    }
+
+    // Check if this node has properties containing cdi:formats_InstanceVariable
+    const props = node.properties
+    if (props && props['cdi:formats_InstanceVariable']) {
+      const fiv = props['cdi:formats_InstanceVariable']
+      if (fiv.type === 'string')
+        fiv.enum = enumValues
+    }
+
+    // Recurse into sub-schemas
+    if (props) {
+      for (const key of Object.keys(props))
+        this._setFormatsVariableEnum(props[key], enumValues)
+    }
+    if (node.items)
+      this._setFormatsVariableEnum(node.items, enumValues)
   }
 
   triggerFileInput() {
