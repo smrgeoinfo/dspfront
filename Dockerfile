@@ -1,6 +1,6 @@
 FROM node:22 as build-stage
 WORKDIR /dspfront
-COPY package*.json ./
+COPY package*.json .npmrc ./
 RUN npm install
 COPY ./ .
 RUN npm run build-prod
