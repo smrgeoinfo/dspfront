@@ -134,6 +134,11 @@ export default defineConfig({
         secure: false,
         changeOrigin: true,
       },
+      '/api/ada-bridge': {
+        target: 'https://localhost',
+        secure: false,
+        changeOrigin: true,
+      },
       '/sockjs-node': {
         target: 'ws://127.0.0.1:8081',
         ws: true,

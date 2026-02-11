@@ -151,7 +151,12 @@ class BundleUploadStep extends Vue {
 
   @Emit('uploaded')
   emitUploaded(sessionData: any) {
-    return sessionData
+    // Attach the original filename so downstream steps can use it
+    // (bundle_path on the server is a temp file name)
+    const originalFilename = this.uploadTab === 0
+      ? this.selectedFile?.name || ''
+      : this.bundleUrl.trim().replace(/^.*[\\/]/, '').replace(/[?#].*$/, '')
+    return { ...sessionData, _originalFilename: originalFilename }
   }
 
   async onUpload() {

@@ -464,48 +464,34 @@ class MetadataFormStep extends Vue {
     // Don't overwrite if distribution was already populated (e.g. from jsonld_draft)
     if (this.data['schema:distribution']?.length) return
 
-    // Derive ZIP filename from bundle_path or fall back to session ID
-    let zipName = 'bundle.zip'
-    const bundlePath = this.sessionData?.bundle_path
-    if (bundlePath) {
-      const basename = bundlePath.replace(/^.*[\\/]/, '')
-      if (basename) zipName = basename
-    }
-
-    // Build hasPart entries from included bundle files (excluding product YAML)
-    const hasPart: any[] = []
+    // Build one distribution entry per included file (excluding product YAML).
+    // Use the full path from the ZIP manifest so directory structure is visible.
+    const distributions: any[] = []
     for (const file of this.bundleFiles) {
       if (file.componentType === 'Product description') continue
 
-      const part: any = {
+      const entry: any = {
         '@type': ['schema:DataDownload'],
-        'schema:name': file.displayName,
+        'schema:name': file.path,
         'schema:encodingFormat': [file.mimeType],
       }
 
       if (file.componentType) {
-        part['schema:additionalType'] = [file.componentType]
+        entry['schema:additionalType'] = [file.componentType]
       }
 
       if (file.inspection?.size) {
-        part['schema:size'] = {
+        entry['schema:size'] = {
           '@type': 'schema:QuantitativeValue',
           'schema:value': file.inspection.size,
           'schema:unitText': 'byte',
         }
       }
 
-      hasPart.push(part)
+      distributions.push(entry)
     }
 
-    this.data['schema:distribution'] = [
-      {
-        '@type': ['schema:DataDownload'],
-        'schema:name': zipName,
-        'schema:encodingFormat': ['application/zip'],
-        'schema:hasPart': hasPart,
-      },
-    ]
+    this.data['schema:distribution'] = distributions
     this.data = { ...this.data }
   }
 
