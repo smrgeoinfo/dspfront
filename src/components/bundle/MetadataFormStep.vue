@@ -176,6 +176,114 @@ import { fetchUserInfo, generateVariableId, populateMaintainer, populateOnLoad }
 
 const CATALOG_API = '/api/catalog'
 
+// dataComponentType → productType lookup (from ADA-AnalyticalMethodsAndAttributes.xlsx product-component sheet)
+const COMPONENT_TO_PRODUCT_TYPE: Record<string, string> = {
+  basemap: 'Basemap',
+  supplementalBasemap: 'Basemap',
+  AIVAImage: 'Analysis Advanced Imaging and Visualization of Astromaterials (AIVA)',
+  AMSProcessedData: 'Accelerator Mass Spectrometry (AMS)',
+  AMSRawData: 'Accelerator Mass Spectrometry (AMS)',
+  ARGTCollection: '⁴⁰Ar/³⁹Ar Geochronology and Thermochronology (ARGT)',
+  ARGTRawData: '⁴⁰Ar/³⁹Ar Geochronology and Thermochronology (ARGT)',
+  ARGTCaptionData: '⁴⁰Ar/³⁹Ar Geochronology and Thermochronology (ARGT)',
+  ARGTSummaryData: '⁴⁰Ar/³⁹Ar Geochronology and Thermochronology (ARGT)',
+  ARGTDocument: '⁴⁰Ar/³⁹Ar Geochronology and Thermochronology (ARGT)',
+  DSCIndividualMeasurements: 'Differential Scanning Calorimetry (DSC)',
+  DSCRawHeatFlux: 'Differential Scanning Calorimetry (DSC)',
+  DSCProcessedHeatFlux: 'Differential Scanning Calorimetry (DSC)',
+  DSCHeatFlow: 'Differential Scanning Calorimetry (DSC)',
+  DSCResultsTabular: 'Differential Scanning Calorimetry (DSC)',
+  EAIRMSCollection: 'Elemental Analysis-Isotope Ratio Mass Spectrometry (EA-IRMS)',
+  EAIRMSRawData: 'Elemental Analysis-Isotope Ratio Mass Spectrometry (EA-IRMS)',
+  EAIRMSProcessedData: 'Elemental Analysis-Isotope Ratio Mass Spectrometry (EA-IRMS)',
+  EMPAImageMap: 'Electron Microprobe Analysis Image (EMPA)',
+  EMPAImage: 'Electron Microprobe Analysis Image (EMPA)',
+  EMPAQEATabular: 'Electron Microprobe Analysis Quantitative Elemental Abundances (EMPAQEA)',
+  FTICRMSCube: 'Fourier Transform Ion Cyclotron Resonance Mass Spectrometry (FTICRMS) Cube',
+  FTICRMSDataPlot: 'Fourier Transform Ion Cyclotron Resonance Mass Spectrometry (FTICRMS) Cube',
+  FTICRMSTabular: 'Fourier Transform Ion Cyclotron Resonance Mass Spectrometry (FTICRMS) Tabular',
+  GCMSCollection: 'Gas Chromatography-Mass Spectrometry (GCMS)',
+  GCMSCube: 'Gas Chromatography-Mass Spectrometry (GCMS)',
+  GCMSChromatogram: 'Gas Chromatography-Mass Spectrometry (GCMS)',
+  GCMSSpectraPlot: 'Gas Chromatography-Mass Spectrometry (GCMS)',
+  GCMSPeaks: 'Gas Chromatography-Mass Spectrometry (GCMS)',
+  GPYCProcessedTabular: 'Gas Pycnometry (GPYC) Processed',
+  GPYCRawTabular: 'Gas Pycnometry (GPYC) Raw',
+  HRICPMSProcessed: 'High-resolution Inductively Coupled Plasma Mass Spectroscopy (HRICPMS) Processed',
+  HRICPMSRaw: 'High-resolution Inductively Coupled Plasma Mass Spectroscopy (HRICPMS) Raw',
+  ICPOESRawTabular: 'Inductively Coupled Plasma - Optical Emission Spectroscopy (ICPOES) Raw',
+  ICPOESIntermediateTabular: 'Inductively Coupled Plasma - Optical Emission Spectroscopy (ICPOES) Intermediate',
+  ICPOESProcessedTabular: 'Inductively Coupled Plasma - Optical Emission Spectroscopy (ICPOES) Processed',
+  ICTabular: 'Ion Chromatography (IC)',
+  L2MSCube: 'Microprobe Two-Step Laser Mass Spectrometry (L2MS)',
+  L2MSOverviewImage: 'Microprobe Two-Step Laser Mass Spectrometry (L2MS)',
+  L2MSSpectraPlot: 'Microprobe Two-Step Laser Mass Spectrometry (L2MS)',
+  LAFProcessed: 'Laser Assisted Fluorination (LAF) Processed',
+  LAFRaw: 'Laser Assisted Fluorination (LAF) Raw',
+  LCMSCollection: 'Liquid Chromatography - Mass Spectrometry (LCMS) Collection',
+  LCMSRawData: 'Liquid Chromatography - Mass Spectrometry (LCMS) Collection',
+  LCMSChromatogram: 'Liquid Chromatography - Mass Spectrometry (LCMS) Collection',
+  LCMSVisualization: 'Liquid Chromatography - Mass Spectrometry (LCMS) Collection',
+  LCMSPeaks: 'Liquid Chromatography - Mass Spectrometry (LCMS) Collection',
+  LITImage: 'Lock-In Thermography (LIT) image',
+  LITPolarDataCollection: 'Lock-In Thermography (LIT) Collection',
+  LITPolarPlotData: 'Lock-In Thermography (LIT) Collection',
+  LITTabularData: 'Lock-In Thermography (LIT) Collection',
+  MCICPMSCollection: 'Multi-Collector Inductively Coupled Plasma Mass Spectrometry (MCICPMS) Raw',
+  MCICPMSRaw: 'Multi-Collector Inductively Coupled Plasma Mass Spectrometry (MCICPMS) Raw',
+  MCICPMSTabular: 'Multi-Collector Inductively Coupled Plasma Mass Spectrometry (MCICPMS) processed',
+  NanoSIMSRawText: 'Nanoscale Secondary Ion Mass Spectrometry (NanoSIMS) Raw',
+  NanoSIMSRaw: 'Nanoscale Secondary Ion Mass Spectrometry (NanoSIMS) Raw',
+  NanoSIMSImage: 'Nanoscale Secondary Ion Mass Spectrometry (NanoSIMS) Image',
+  NanoSIMSTabular: 'Nanoscale Secondary Ion Mass Spectrometry (NanoSIMS) Tabular',
+  NGNSMSProcessed: 'Noble Gas and Nitrogen Static Mass Spectrometry (NGNSMS) Processed',
+  NGNSMSRaw: 'Noble Gas and Nitrogen Static Mass Spectrometry (NGNSMS) Raw',
+  PSFDTabular: 'Particle Size Frequency Distribution (PSFD)',
+  PSFDShapeFile: 'Particle Size Frequency Distribution (PSFD)',
+  PSFDContextImage: 'Particle Size Frequency Distribution (PSFD)',
+  QICPMSProcessedTabular: 'Quadrupole Inductively Coupled Plasma Mass Spectrometry (QICPMS) Processed',
+  QICPMSRawTabular: 'Quadrupole Inductively Coupled Plasma Mass Spectrometry (QICPMS) Raw',
+  QRISCalibratedImage: 'Quantitative Reflective Imaging System (QRIS) Calibrated',
+  QRISRawImage: 'Quantitative Reflective Imaging System (QRIS) Raw',
+  RAMANRawTabular: 'RAMAN Raw',
+  RITOFNGMSSpectra: 'Resonance ionization time of flight noble gas mass spectrometry (RITOFNGMS) Spectra',
+  RITOFNGMSTabular: 'Resonance ionization time of flight noble gas mass spectrometry (RITOFNGMS) Processed',
+  SEMEBSDGrainImageMap: 'Scanning Electron Microscopy Electron Backscatter Diffraction (SEMEBSD) Grain Image',
+  SEMEDSPointSpectraPlot: 'Scanning Electron Microscopy Energy Dispersive X-ray Spectroscopy (SEMEDS) Point Data',
+  SEMEDSPointSpectraData: 'Scanning Electron Microscopy Energy Dispersive X-ray Spectroscopy (SEMEDS) Point Data',
+  SEMEDSPointData: 'Scanning Electron Microscopy Energy Dispersive X-ray Spectroscopy (SEMEDS) Point Data',
+  SEMImageMap: 'Scanning Electron Microscopy (SEM) Image',
+  SEMImage: 'Scanning Electron Microscopy (SEM) Image',
+  SIMSTabular: 'Secondary Ion Mass Spectrometry (SIMS) Tabular',
+  SLSShapeModel: 'Structured Light Scanning (SLS) Shape Model',
+  STEMEDSCube: 'Scanning Transmission Electron Microscopy Energy Dispersive X-ray Spectroscopy (STEMEDS) Cube',
+  STEMEDSSpectraPlot: 'Scanning Transmission Electron Microscopy Energy Dispersive X-ray Spectroscopy (STEMEDS) Tabular',
+  STEMEDSTabular: 'Scanning Transmission Electron Microscopy Energy Dispersive X-ray Spectroscopy (STEMEDS) Tabular',
+  STEMEDSTomo: 'Scanning Transmission Electron Microscopy Energy Dispersive X-ray Spectroscopy (STEMEDS) Tomography',
+  STEMEELSCube: 'Scanning Transmission Electron Microscopy Electron Energy-loss Spectra (STEMEELS) Cube',
+  STEMEELSSpectraPlot: 'Scanning Transmission Electron Microscopy Electron Energy-loss Spectra (STEMEELS) Tabular',
+  STEMEELSTabular: 'Scanning Transmission Electron Microscopy Electron Energy-loss Spectra (STEMEELS) Tabular',
+  STEMImage: 'Scanning Transmission Electron Microscopy (STEM) Image',
+  SVRUECTabular: 'Seismic Velocities and Rock Ultrasonic Elastic Constants (SVRUEC)',
+  SVRUECWaveformPlot: 'Seismic Velocities and Rock Ultrasonic Elastic Constants (SVRUEC)',
+  SVRUECWaveformData: 'Seismic Velocities and Rock Ultrasonic Elastic Constants (SVRUEC)',
+  TEMImage: 'Transmission Electron Microscopy (TEM) Image',
+  TEMPatternsImage: 'Transmission Electron Microscopy (TEM) Patterns Image',
+  TOFSIMSMassSpectrumData: 'Time-of-flight secondary ion mass spectrometry (TOFSIMS)',
+  TOFSIMSMassSpectrumPlot: 'Time-of-flight secondary ion mass spectrometry (TOFSIMS)',
+  TOFSIMSIonImages: 'Time-of-flight secondary ion mass spectrometry (TOFSIMS)',
+  UVFMImage: 'Fluorescence Microscopy (UVFM) Image',
+  VLMImage: 'Visible Light Microscopy (VLM) Image',
+  VLMVideo: 'Visible Light Microscopy (VLM) Image',
+  VNMIRSpectralPoint: 'Visible, near-infrared, and mid-infrared Spectroscopy (VNMIR) Point',
+  VNMIRSpectraPlot: 'Visible, near-infrared, and mid-infrared Spectroscopy (VNMIR) Point',
+  XANESImageStack: 'X-ray Absorption Near Edge Structure Hyperspectral Image Stack (XANES)',
+  XANESStackOverviewImage: 'X-ray Absorption Near Edge Structure Hyperspectral Image Stack (XANES)',
+  XRDTabular: 'X-ray Diffraction (XRD) Tabular',
+  XRDDiffractionPattern: 'X-ray Diffraction (XRD) Tabular',
+  XRDIndexedImage: 'X-ray Diffraction (XRD) Tabular',
+}
+
 @Component({
   name: 'metadata-form-step',
   components: { CzForm },
@@ -273,13 +381,21 @@ class MetadataFormStep extends Vue {
 
       populateOnLoad(this.data)
 
-      // Pre-populate from introspection if available
+      // Pre-populate from product YAML if available
+      if (this.sessionData?.product_yaml) {
+        this.prePopulateFromProductYaml(this.sessionData.product_yaml)
+      }
+
+      // Pre-populate from introspection if available (overrides product YAML)
       if (this.sessionData?.jsonld_draft) {
         this.data = { ...this.data, ...this.sessionData.jsonld_draft }
       }
 
       // Pre-populate from bundle files — add variables from CSV columns
       this.prePopulateFromFiles()
+
+      // Pre-populate distribution from bundle files
+      this.prePopulateDistribution()
 
       // Auto-populate maintainer
       if (User.$state.isLoggedIn) {
@@ -341,6 +457,220 @@ class MetadataFormStep extends Vue {
       this.data['schema:variableMeasured'] = variables
       this.data = { ...this.data }
     }
+  }
+
+  prePopulateDistribution() {
+    if (!this.bundleFiles?.length) return
+    // Don't overwrite if distribution was already populated (e.g. from jsonld_draft)
+    if (this.data['schema:distribution']?.length) return
+
+    // Derive ZIP filename from bundle_path or fall back to session ID
+    let zipName = 'bundle.zip'
+    const bundlePath = this.sessionData?.bundle_path
+    if (bundlePath) {
+      const basename = bundlePath.replace(/^.*[\\/]/, '')
+      if (basename) zipName = basename
+    }
+
+    // Build hasPart entries from included bundle files (excluding product YAML)
+    const hasPart: any[] = []
+    for (const file of this.bundleFiles) {
+      if (file.componentType === 'Product description') continue
+
+      const part: any = {
+        '@type': ['schema:DataDownload'],
+        'schema:name': file.displayName,
+        'schema:encodingFormat': [file.mimeType],
+      }
+
+      if (file.componentType) {
+        part['schema:additionalType'] = [file.componentType]
+      }
+
+      if (file.inspection?.size) {
+        part['schema:size'] = {
+          '@type': 'schema:QuantitativeValue',
+          'schema:value': file.inspection.size,
+          'schema:unitText': 'byte',
+        }
+      }
+
+      hasPart.push(part)
+    }
+
+    this.data['schema:distribution'] = [
+      {
+        '@type': ['schema:DataDownload'],
+        'schema:name': zipName,
+        'schema:encodingFormat': ['application/zip'],
+        'schema:hasPart': hasPart,
+      },
+    ]
+    this.data = { ...this.data }
+  }
+
+  prePopulateFromProductYaml(py: any) {
+    if (!py || typeof py !== 'object') return
+
+    // Title / description
+    if (py.title) this.data['schema:name'] = py.title
+    if (py.abstract) this.data['schema:description'] = py.abstract
+
+    // DOI → schema:identifier (simple string on adaProduct)
+    if (py.doi) {
+      this.data['schema:identifier'] = py.doi
+    }
+
+    // Product type from dataComponentType lookup
+    if (py.dataComponentType) {
+      const ct = typeof py.dataComponentType === 'string' ? py.dataComponentType : py.dataComponentType[0]
+      const productType = COMPONENT_TO_PRODUCT_TYPE[ct]
+      if (productType) {
+        const existing: string[] = this.data['schema:additionalType'] || []
+        if (!existing.includes(productType)) {
+          this.data['schema:additionalType'] = [productType, ...existing]
+        }
+      }
+    }
+
+    // Publication year
+    if (py.publicationYear) {
+      this.data['schema:datePublished'] = String(py.publicationYear)
+    }
+
+    // Analysis date
+    if (py.analysisDate) {
+      this.data['schema:dateCreated'] = py.analysisDate
+    }
+
+    // Creators (dataProductCreator)
+    if (Array.isArray(py.dataProductCreator) && py.dataProductCreator.length) {
+      this.data['schema:creator'] = {
+        '@list': py.dataProductCreator.map((p: any) => this._personToJsonld(p)),
+      }
+    }
+
+    // Contributors — instrumentOperator + dataAnalyst with roles
+    const contributors: any[] = []
+    if (Array.isArray(py.instrumentOperator)) {
+      for (const p of py.instrumentOperator) {
+        contributors.push(this._contributorWithRole(p, 'Instrument Operator'))
+      }
+    }
+    if (Array.isArray(py.dataAnalyst)) {
+      for (const p of py.dataAnalyst) {
+        contributors.push(this._contributorWithRole(p, 'Data Analyst'))
+      }
+    }
+    if (contributors.length) {
+      this.data['schema:contributor'] = contributors
+    }
+
+    // Funding (may be a string or object)
+    if (py.funding) {
+      const fundingText = typeof py.funding === 'string' ? py.funding : JSON.stringify(py.funding)
+      if (fundingText && !this.data['schema:funding']?.length) {
+        this.data['schema:funding'] = [{
+          '@type': 'schema:MonetaryGrant',
+          'schema:name': fundingText,
+          'schema:identifier': '',
+          'schema:funder': {
+            '@type': 'schema:Organization',
+            'schema:name': '',
+          },
+        }]
+      }
+    }
+
+    // Analysis Events → prov:wasGeneratedBy
+    {
+      const activity: any = { '@type': 'prov:Activity' }
+
+      // sessionId → Session ID
+      if (py.sessionId) activity['schema:identifier'] = py.sessionId
+
+      // analysisDate → Start Date
+      if (py.analysisDate) activity['schema:startDate'] = py.analysisDate
+
+      // instrument → Instruments (prov:used array)
+      if (py.instrument && typeof py.instrument === 'object') {
+        activity['prov:used'] = [{
+          '@type': 'schema:Thing',
+          'schema:name': py.instrument.name || '',
+          'schema:identifier': py.instrument.identifier || '',
+        }]
+      }
+
+      // institution → Laboratory (schema:location)
+      if (py.institution && typeof py.institution === 'object') {
+        activity['schema:location'] = {
+          '@type': 'schema:Place',
+          'schema:name': py.institution.name || '',
+          'schema:identifier': py.institution.ror || '',
+        }
+      }
+
+      // sampleIdentifier → Samples (schema:mainEntity)
+      if (py.sampleIdentifier) {
+        const sampleIds = Array.isArray(py.sampleIdentifier) ? py.sampleIdentifier : [py.sampleIdentifier]
+        activity['schema:mainEntity'] = [{
+          '@type': ['schema:Thing', 'https://w3id.org/isample/vocabulary/materialsampleobjecttype/materialsample'],
+          'schema:identifier': sampleIds,
+        }]
+      }
+
+      // Only add if we have at least some data
+      const hasData = activity['schema:identifier'] || activity['schema:startDate']
+        || activity['prov:used'] || activity['schema:location'] || activity['schema:mainEntity']
+      if (hasData) {
+        this.data['prov:wasGeneratedBy'] = [activity]
+      }
+    }
+
+    // Measurement technique from analysisTechniqueName
+    if (py.analysisTechniqueName) {
+      this.data['schema:measurementTechnique'] = {
+        '@type': 'schema:DefinedTerm',
+        'schema:name': py.analysisTechniqueName,
+        'schema:identifier': py.analysisTechniqueIdentifier || '',
+      }
+    }
+
+    // Keywords from analysisTechniqueName and dataComponentType
+    const keywords: string[] = []
+    if (py.analysisTechniqueName) keywords.push(py.analysisTechniqueName)
+    if (py.analysisTechniqueIdentifier) keywords.push(py.analysisTechniqueIdentifier)
+    if (py.dataComponentType) {
+      const types = Array.isArray(py.dataComponentType) ? py.dataComponentType : [py.dataComponentType]
+      keywords.push(...types)
+    }
+    if (py.sampleIdentifier) keywords.push(`Sample: ${py.sampleIdentifier}`)
+    if (keywords.length) {
+      this.data['schema:keywords'] = keywords
+    }
+
+    // Trigger reactivity
+    this.data = { ...this.data }
+  }
+
+  _personToJsonld(p: any): any {
+    const person: any = { '@type': 'schema:Person' }
+    if (p.name) person['schema:name'] = p.name
+    if (p.orcid) person['schema:identifier'] = p.orcid
+    if (p.email) person['schema:email'] = p.email
+    if (p.affiliation) {
+      person['schema:affiliation'] = {
+        '@type': 'schema:Organization',
+        'schema:name': p.affiliation,
+      }
+    }
+    return person
+  }
+
+  _contributorWithRole(p: any, roleName: string): any {
+    const person = this._personToJsonld(p)
+    person['schema:roleName'] = roleName
+    return person
   }
 
   changeProfile() {
