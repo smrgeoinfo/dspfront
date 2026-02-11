@@ -51,14 +51,23 @@
             </cz-repository-submit-card>
 
             <cz-repository-submit-card
-              :repo="externalRepoMetadata"
-              @click.enter="openRegisterDatasetDialog"
+              :repo="registerDatasetCardMetadata"
+              @click.enter="goToRegisterDataset"
+            />
+
+            <cz-repository-submit-card
+              :repo="updateMetadataCardMetadata"
+              @click.enter="goToUpdateMetadata"
+            />
+
+            <cz-repository-submit-card
+              :repo="bundleWizardCardMetadata"
+              @click.enter="goToBundleWizard"
             />
           </div>
         </div>
       </v-container>
 
-      <cz-register-dataset-dialog ref="registerDatasetDialog" />
     </template>
 
     <template v-else>
@@ -71,9 +80,8 @@
 import type { RouteLocationNormalized } from 'vue-router'
 import { EnumRepositoryKeys, type IRepository } from '../submissions/types'
 import { Notifications } from '@cznethub/cznet-vue-core'
-import { Component, mixins, Ref, toNative } from 'vue-facing-decorator'
-import { useRoute } from 'vue-router'
-import CzRegisterDatasetDialog from '~/components/register-dataset/cz.register-dataset-dialog.vue'
+import { Component, mixins, toNative } from 'vue-facing-decorator'
+import { useRoute, useRouter } from 'vue-router'
 import { repoMetadata } from '~/components/submit/constants'
 import CzRepositorySubmitCard from '~/components/submit/cz.repository-submit-card.vue'
 import { ActiveRepositoryMixin } from '~/mixins/activeRepository.mixin'
@@ -82,19 +90,50 @@ import { guideUrls } from '../recommendations/constants'
 
 @Component({
   name: 'cz-submit',
-  components: { CzRepositorySubmitCard, CzRegisterDatasetDialog },
+  components: { CzRepositorySubmitCard },
 })
 class CzSubmit extends mixins(ActiveRepositoryMixin) {
-  @Ref('registerDatasetDialog') registerDatasetDialog!: InstanceType<
-    typeof CzRegisterDatasetDialog
-  >
 
   route = useRoute()
+  router = useRouter()
   guideUrls = guideUrls
 
   sesarCardMetadata = {
     ...repoMetadata[EnumRepositoryKeys.sesar],
     name: 'Register Samples',
+  }
+
+  registerDatasetCardMetadata: IRepository = {
+    key: EnumRepositoryKeys.external,
+    name: 'Register Dataset',
+    logoSrc: '',
+    description:
+      'Register a dataset that has already been submitted to another repository. Creates a CDIF Discovery metadata record for discoverability.',
+    isExternal: true,
+    isSupported: { registration: false, form: true },
+    submitTooltip: 'Register a dataset submitted to another repository.',
+  }
+
+  updateMetadataCardMetadata: IRepository = {
+    key: EnumRepositoryKeys.external,
+    name: 'Update Existing Metadata',
+    logoSrc: '',
+    description:
+      'Fetch and update an existing metadata record by DOI, upload a JSON-LD file, or load metadata from a URL.',
+    isExternal: true,
+    isSupported: { registration: false, form: true },
+    submitTooltip: 'Update an existing metadata record.',
+  }
+
+  bundleWizardCardMetadata: IRepository = {
+    key: EnumRepositoryKeys.ada,
+    name: 'ADA Bundle Wizard',
+    logoSrc: '/img/ada.png',
+    description:
+      'Upload a data bundle (ZIP), introspect file contents, fill metadata forms driven by OGC Building Block profiles, and push metadata to ADA.',
+    isExternal: true,
+    isSupported: { registration: false, form: true },
+    submitTooltip: 'Create metadata from an ADA data bundle.',
   }
 
   get repoCollection(): IRepository[] {
@@ -105,16 +144,20 @@ class CzSubmit extends mixins(ActiveRepositoryMixin) {
     return this.repoCollection.filter(r => !r.isExternal && r.isSupported?.form)
   }
 
-  get externalRepoMetadata() {
-    return this.repoCollection.find(r => r.isExternal)
-  }
-
   get isInSubmitLandingPage() {
     return !(this.route as RouteLocationNormalized).params.repository
   }
 
-  openRegisterDatasetDialog() {
-    this.registerDatasetDialog.active = true
+  goToRegisterDataset() {
+    this.router.push({ name: 'metadata-cdif' })
+  }
+
+  goToUpdateMetadata() {
+    this.router.push({ name: 'update-metadata' })
+  }
+
+  goToBundleWizard() {
+    this.router.push({ name: 'bundle-wizard' })
   }
 
   openSesar() {

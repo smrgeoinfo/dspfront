@@ -16,6 +16,8 @@ import CzRegisterDataset from '~/components/register-dataset/cz.register-dataset
 import CzResources from '~/components/resources/cz.resources.vue'
 import CzSubmissions from '~/components/submissions/geodat.submissions.vue'
 import CzSubmit from '~/components/submit/cz.submit.vue'
+import BundleWizard from '~/components/bundle/BundleWizard.vue'
+import UpdateMetadata from '~/components/metadata/UpdateMetadata.vue'
 import { hasAccessTokenGuard, hasLoggedInGuard, hasUnsavedChangesGuard } from './guards'
 
 export const routes: RouteRecordRaw[] = [
@@ -200,7 +202,42 @@ export const routes: RouteRecordRaw[] = [
       content: CzContact,
       footer: CzFooter,
     },
-
+  },
+  {
+    name: 'update-metadata',
+    path: '/metadata/update',
+    components: {
+      content: UpdateMetadata,
+      footer: CzFooter,
+    },
+    beforeEnter: [hasLoggedInGuard],
+    meta: {
+      title: 'Update Existing Metadata',
+    },
+  },
+  {
+    name: 'bundle-wizard',
+    path: '/bundle-wizard',
+    components: {
+      content: BundleWizard,
+      footer: CzFooter,
+    },
+    beforeEnter: [hasLoggedInGuard],
+    meta: {
+      title: 'ADA Bundle Wizard',
+    },
+  },
+  {
+    name: 'bundle-wizard-step',
+    path: '/bundle-wizard/:sessionId/:step?',
+    components: {
+      content: BundleWizard,
+      footer: CzFooter,
+    },
+    beforeEnter: [hasLoggedInGuard],
+    meta: {
+      title: 'ADA Bundle Wizard',
+    },
   },
   /** @see https://router.vuejs.org/guide/migration/#removed-star-or-catch-all-routes */
   { path: '/:pathMatch(.*)*', name: 'not-found', redirect: { name: 'home' } },

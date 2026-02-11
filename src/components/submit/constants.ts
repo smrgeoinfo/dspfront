@@ -6,27 +6,17 @@ import {
 } from '~/components/submissions/types'
 
 export const repoMetadata: { [key: string]: IRepository } = {
-  [EnumRepositoryKeys.hydroshare]: {
-    key: EnumRepositoryKeys.hydroshare,
-    name: 'HydroShare',
-    logoSrc: '/img/hydroshare.png',
+  [EnumRepositoryKeys.ada]: {
+    key: EnumRepositoryKeys.ada,
+    name: 'Astromat Data Archive (ADA)',
+    dropdownName: 'ADA Datasets',
+    logoSrc: '/img/ada.png',
     description:
-      'A dependable data management and publication solution for hydrologic data types and models.',
-    submitTooltip: 'Submit a dataset to the HydroShare repository.',
-    isSupported: { registration: true, form: true },
-    hasFolderStructure: true,
-    maxUploadSizePerFile: 25 * 1024 ** 3, // 25GB in BYTES
-    // https://github.com/hydroshare/hydroshare/blob/master/hs_core/models.py#L3110-L3112
-    // https://github.com/hydroshare/hydroshare/blob/master/hs_core/models.py#L3527-L3553
-    fileNameRegex: /^[^\\/:*?"<>|]+$/,
-    folderNameRegex: /^[^\\/:*?"<>|]+$/,
-    url: 'https://www.hydroshare.org',
-    supportUrl: 'https://help.hydroshare.org/',
-    exampleUrl:
-      'https://www.hydroshare.org/resource/9d3d437466764bb5b6668d2742cf9db2/',
-    exampleIdentifier: '9d3d437466764bb5b6668d2742cf9db2',
-    identifierUrlPattern: /(?:http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?hydroshare.org\/resource\/([0-9a-fA-F]{32})\/?$/,
-    identifierPattern: /^[0-9a-f]{32}$/i,
+      'The Astromat Data Archive (ADA) preserves and provides access to analytical data from astromaterials research including meteorites, cosmic dust, and returned samples. ADA supports detailed instrument-specific metadata for a wide range of analytical techniques.',
+    isSupported: { registration: false, form: true },
+    isExternal: true,
+    submitTooltip: 'Submit an ADA product metadata record.',
+    url: 'https://www.astromat.org/',
   },
   [EnumRepositoryKeys.earthchem]: {
     key: EnumRepositoryKeys.earthchem,
@@ -237,16 +227,24 @@ export const repoMetadata: { [key: string]: IRepository } = {
     submitTooltip: 'Submit data to HydroLearn.',
     url: 'https://www.hydrolearn.org/',
   },
-  [EnumRepositoryKeys.ada]: {
-    key: EnumRepositoryKeys.ada,
-    name: 'Astromat Data Archive (ADA)',
-    dropdownName: 'ADA Datasets',
-    logoSrc: '/img/ada.png',
+  [EnumRepositoryKeys.hydroshare]: {
+    key: EnumRepositoryKeys.hydroshare,
+    name: 'HydroShare',
+    logoSrc: '/img/hydroshare.png',
     description:
-      'The Astromat Data Archive (ADA) preserves and provides access to analytical data from astromaterials research including meteorites, cosmic dust, and returned samples. ADA supports detailed instrument-specific metadata for a wide range of analytical techniques.',
-    isSupported: { registration: false, form: true },
-    isExternal: true,
-    submitTooltip: 'Submit an ADA product metadata record.',
-    url: 'https://www.astromat.org/',
+      'A dependable data management and publication solution for hydrologic data types and models.',
+    submitTooltip: 'Submit a dataset to the HydroShare repository.',
+    isSupported: { registration: true, form: true },
+    hasFolderStructure: true,
+    maxUploadSizePerFile: 25 * 1024 ** 3, // 25GB in BYTES
+    fileNameRegex: /^[^\\/:*?"<>|]+$/,
+    folderNameRegex: /^[^\\/:*?"<>|]+$/,
+    url: 'https://www.hydroshare.org',
+    supportUrl: 'https://help.hydroshare.org/',
+    exampleUrl:
+      'https://www.hydroshare.org/resource/9d3d437466764bb5b6668d2742cf9db2/',
+    exampleIdentifier: '9d3d437466764bb5b6668d2742cf9db2',
+    identifierUrlPattern: /(?:http:\/\/www\.|https:\/\/www\.|http:\/\/|https:\/\/)?hydroshare.org\/resource\/([0-9a-fA-F]{32})\/?$/,
+    identifierPattern: /^[0-9a-f]{32}$/i,
   },
 }

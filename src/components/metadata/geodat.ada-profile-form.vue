@@ -162,6 +162,58 @@
         </v-card-text>
       </v-card>
     </v-dialog>
+
+    <!-- New Variable dialog -->
+    <v-dialog v-model="showNewVariableDialog" max-width="520" persistent>
+      <v-card>
+        <v-card-title class="text-h6">
+          New Variable
+        </v-card-title>
+        <v-card-text>
+          <v-text-field
+            v-model="newVariable.name"
+            label="Name *"
+            variant="outlined"
+            density="compact"
+            hint="Label for this variable as it appears in the dataset"
+            persistent-hint
+            class="mb-3"
+          />
+          <v-textarea
+            v-model="newVariable.description"
+            label="Description *"
+            variant="outlined"
+            density="compact"
+            rows="2"
+            hint="What this variable represents"
+            persistent-hint
+            class="mb-3"
+          />
+          <v-text-field
+            v-model="newVariable.unitText"
+            label="Unit (optional)"
+            variant="outlined"
+            density="compact"
+            hint="e.g. degrees Celsius, mg/L, meters"
+            persistent-hint
+          />
+        </v-card-text>
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showNewVariableDialog = false">
+            Cancel
+          </v-btn>
+          <v-btn
+            color="primary"
+            variant="elevated"
+            :disabled="!newVariable.name || !newVariable.description"
+            @click="onCreateVariable"
+          >
+            Add Variable
+          </v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
   </v-container>
 </template>
 
@@ -202,6 +254,8 @@ class GeodatAdaProfileForm extends Vue {
   tabValidity: boolean[] = []
   profileId: number | null = null
   recordId: string | null = null
+  showNewVariableDialog = false
+  newVariable = { name: '', description: '', unitText: '' }
 
   get config() {
     return {
@@ -274,6 +328,53 @@ class GeodatAdaProfileForm extends Vue {
 
   created() {
     this.loadSchemas()
+  }
+
+  updated() {
+    this.$nextTick(() => this._injectNewVariableButtons())
+  }
+
+  /**
+   * Inject a "New Variable" button into each Physical Mapping array toolbar.
+   * CzForm doesn't support custom buttons in UISchema, so we find the
+   * rendered array controls by their label text and inject a button into
+   * the toolbar next to the existing "+" add button.
+   */
+  _injectNewVariableButtons() {
+    const container = this.$el as HTMLElement
+    if (!container) return
+
+    // Find all array labels (both array-list and list-with-detail variants)
+    const labels = container.querySelectorAll('.array-list-label, .list-with-detail-label')
+    for (const label of labels) {
+      if (label.textContent?.trim() !== 'Physical Mapping') continue
+
+      // Find the parent toolbar
+      const toolbar = label.closest('.array-list-toolbar, .list-with-detail-toolbar')
+      if (!toolbar) continue
+
+      // Don't inject if already present
+      if (toolbar.querySelector('.new-variable-btn')) continue
+
+      const btn = document.createElement('button')
+      btn.className = 'new-variable-btn v-btn v-btn--density-compact v-btn--size-small v-btn--variant-tonal v-theme--light'
+      btn.type = 'button'
+      btn.style.cssText = 'margin-left: 8px; font-size: 0.75rem; padding: 0 8px; height: 28px; min-width: auto; border-radius: 4px; cursor: pointer; background-color: rgb(var(--v-theme-primary)); color: white;'
+      btn.textContent = '+ New Variable'
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation()
+        this.showNewVariableDialog = true
+      })
+
+      // Insert after the label, before the add button
+      const addBtn = toolbar.querySelector('.array-list-add, .list-with-detail-add')
+      if (addBtn) {
+        toolbar.insertBefore(btn, addBtn)
+      }
+      else {
+        toolbar.appendChild(btn)
+      }
+    }
   }
 
   async loadSchemas() {
@@ -394,6 +495,47 @@ class GeodatAdaProfileForm extends Vue {
     }
     if (node.items)
       this._setFormatsVariableEnum(node.items, enumValues)
+  }
+
+  /**
+   * Create a new variableMeasured item from the dialog and update the dropdown.
+   */
+  async onCreateVariable() {
+    const name = this.newVariable.name.trim()
+    const description = this.newVariable.description.trim()
+    if (!name || !description)
+      return
+
+    const id = await generateVariableId(name)
+    const variable: any = {
+      '@type': ['schema:PropertyValue', 'cdi:InstanceVariable'],
+      '@id': id,
+      'schema:name': name,
+      'schema:description': description,
+    }
+    if (this.newVariable.unitText.trim())
+      variable['schema:unitText'] = this.newVariable.unitText.trim()
+
+    // Ensure variableMeasured array exists
+    if (!this.data['schema:variableMeasured'])
+      this.data['schema:variableMeasured'] = []
+
+    this.data['schema:variableMeasured'].push(variable)
+
+    // Trigger Vue reactivity
+    this.data = { ...this.data }
+
+    // Update the Variable dropdowns in physicalMapping
+    await this.updateVariableOptions()
+
+    // Reset dialog
+    this.newVariable = { name: '', description: '', unitText: '' }
+    this.showNewVariableDialog = false
+
+    Notifications.toast({
+      message: `Variable "${name}" added.`,
+      type: 'success',
+    })
   }
 
   triggerFileInput() {
