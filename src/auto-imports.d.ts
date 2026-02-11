@@ -9,6 +9,7 @@ declare global {
   const EffectScope: typeof import('vue').EffectScope
   const asyncComputed: typeof import('@vueuse/core').asyncComputed
   const autoResetRef: typeof import('@vueuse/core').autoResetRef
+  const buildVariableEnum: typeof import('./composables/useVariableManagement').buildVariableEnum
   const computed: typeof import('vue').computed
   const computedAsync: typeof import('@vueuse/core').computedAsync
   const computedEager: typeof import('@vueuse/core').computedEager
@@ -26,6 +27,7 @@ declare global {
   const createSharedComposable: typeof import('@vueuse/core').createSharedComposable
   const createTemplatePromise: typeof import('@vueuse/core').createTemplatePromise
   const createUnrefFn: typeof import('@vueuse/core').createUnrefFn
+  const createVariableEntry: typeof import('./composables/useVariableManagement').createVariableEntry
   const customRef: typeof import('vue').customRef
   const debouncedRef: typeof import('@vueuse/core').debouncedRef
   const debouncedWatch: typeof import('@vueuse/core').debouncedWatch
@@ -70,6 +72,7 @@ declare global {
   const onUpdated: typeof import('vue').onUpdated
   const onWatcherCleanup: typeof import('vue').onWatcherCleanup
   const pausableWatch: typeof import('@vueuse/core').pausableWatch
+  const prePopulateVariablesFromInspection: typeof import('./composables/useVariableManagement').prePopulateVariablesFromInspection
   const provide: typeof import('vue').provide
   const provideLocal: typeof import('@vueuse/core').provideLocal
   const reactify: typeof import('@vueuse/core').reactify
@@ -89,6 +92,7 @@ declare global {
   const resolveComponent: typeof import('vue').resolveComponent
   const resolveRef: typeof import('@vueuse/core').resolveRef
   const resolveUnref: typeof import('@vueuse/core')['resolveUnref']
+  const setFormatsVariableEnum: typeof import('./composables/useVariableManagement').setFormatsVariableEnum
   const shallowReactive: typeof import('vue').shallowReactive
   const shallowReadonly: typeof import('vue').shallowReadonly
   const shallowRef: typeof import('vue').shallowRef
@@ -302,6 +306,9 @@ declare global {
   // @ts-ignore
   export type { Component, Slot, Slots, ComponentPublicInstance, ComputedRef, DirectiveBinding, ExtractDefaultPropTypes, ExtractPropTypes, ExtractPublicPropTypes, InjectionKey, PropType, Ref, ShallowRef, MaybeRef, MaybeRefOrGetter, VNode, WritableComputedRef } from 'vue'
   import('vue')
+  // @ts-ignore
+  export type { VariableInfo, BundleFileInspection } from './composables/useVariableManagement'
+  import('./composables/useVariableManagement')
 }
 
 // for vue template auto import
@@ -312,6 +319,7 @@ declare module 'vue' {
     readonly EffectScope: UnwrapRef<typeof import('vue')['EffectScope']>
     readonly asyncComputed: UnwrapRef<typeof import('@vueuse/core')['asyncComputed']>
     readonly autoResetRef: UnwrapRef<typeof import('@vueuse/core')['autoResetRef']>
+    readonly buildVariableEnum: UnwrapRef<typeof import('./composables/useVariableManagement')['buildVariableEnum']>
     readonly computed: UnwrapRef<typeof import('vue')['computed']>
     readonly computedAsync: UnwrapRef<typeof import('@vueuse/core')['computedAsync']>
     readonly computedEager: UnwrapRef<typeof import('@vueuse/core')['computedEager']>
@@ -329,6 +337,7 @@ declare module 'vue' {
     readonly createSharedComposable: UnwrapRef<typeof import('@vueuse/core')['createSharedComposable']>
     readonly createTemplatePromise: UnwrapRef<typeof import('@vueuse/core')['createTemplatePromise']>
     readonly createUnrefFn: UnwrapRef<typeof import('@vueuse/core')['createUnrefFn']>
+    readonly createVariableEntry: UnwrapRef<typeof import('./composables/useVariableManagement')['createVariableEntry']>
     readonly customRef: UnwrapRef<typeof import('vue')['customRef']>
     readonly debouncedRef: UnwrapRef<typeof import('@vueuse/core')['debouncedRef']>
     readonly debouncedWatch: UnwrapRef<typeof import('@vueuse/core')['debouncedWatch']>
@@ -373,6 +382,7 @@ declare module 'vue' {
     readonly onUpdated: UnwrapRef<typeof import('vue')['onUpdated']>
     readonly onWatcherCleanup: UnwrapRef<typeof import('vue')['onWatcherCleanup']>
     readonly pausableWatch: UnwrapRef<typeof import('@vueuse/core')['pausableWatch']>
+    readonly prePopulateVariablesFromInspection: UnwrapRef<typeof import('./composables/useVariableManagement')['prePopulateVariablesFromInspection']>
     readonly provide: UnwrapRef<typeof import('vue')['provide']>
     readonly provideLocal: UnwrapRef<typeof import('@vueuse/core')['provideLocal']>
     readonly reactify: UnwrapRef<typeof import('@vueuse/core')['reactify']>
@@ -391,6 +401,7 @@ declare module 'vue' {
     readonly refWithControl: UnwrapRef<typeof import('@vueuse/core')['refWithControl']>
     readonly resolveComponent: UnwrapRef<typeof import('vue')['resolveComponent']>
     readonly resolveRef: UnwrapRef<typeof import('@vueuse/core')['resolveRef']>
+    readonly setFormatsVariableEnum: UnwrapRef<typeof import('./composables/useVariableManagement')['setFormatsVariableEnum']>
     readonly shallowReactive: UnwrapRef<typeof import('vue')['shallowReactive']>
     readonly shallowReadonly: UnwrapRef<typeof import('vue')['shallowReadonly']>
     readonly shallowRef: UnwrapRef<typeof import('vue')['shallowRef']>

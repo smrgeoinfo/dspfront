@@ -11,6 +11,9 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    BundleReviewStep: typeof import('./components/bundle/BundleReviewStep.vue')['default']
+    BundleUploadStep: typeof import('./components/bundle/BundleUploadStep.vue')['default']
+    BundleWizard: typeof import('./components/bundle/BundleWizard.vue')['default']
     'Cz.about': typeof import('./components/about/cz.about.vue')['default']
     'Cz.account': typeof import('./components/profile/cz.account.vue')['default']
     'Cz.authorize': typeof import('./components/authorize/cz.authorize.vue')['default']
@@ -31,11 +34,15 @@ declare module 'vue' {
     'Cz.repositorySubmitCard': typeof import('./components/submit/cz.repository-submit-card.vue')['default']
     'Cz.resources': typeof import('./components/resources/cz.resources.vue')['default']
     'Cz.submit': typeof import('./components/submit/cz.submit.vue')['default']
+    FileReviewStep: typeof import('./components/bundle/FileReviewStep.vue')['default']
     'Geodat.adaProfileForm': typeof import('./components/metadata/geodat.ada-profile-form.vue')['default']
     'Geodat.adaSelectType': typeof import('./components/metadata/geodat.ada-select-type.vue')['default']
     'Geodat.cdifForm': typeof import('./components/metadata/geodat.cdif-form.vue')['default']
     'Geodat.submissions': typeof import('./components/submissions/geodat.submissions.vue')['default']
+    MetadataFormStep: typeof import('./components/bundle/MetadataFormStep.vue')['default']
+    ProductFormStep: typeof import('./components/bundle/ProductFormStep.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
+    UpdateMetadata: typeof import('./components/metadata/UpdateMetadata.vue')['default']
   }
 }
