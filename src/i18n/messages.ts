@@ -84,6 +84,10 @@ export const messages = {
             name: `Visible-Near-Mid Infrared Spectroscopy (VNMIR)`,
             description: `Metadata for visible, near-infrared, and mid-infrared spectroscopy datasets.`,
           },
+          CDIFxas: {
+            name: `X-Ray Absorption Spectroscopy (XAS)`,
+            description: `CDIF metadata for XAS datasets, including X-ray source, monochromator, sample, absorption edge, and target element.`,
+          },
         },
       },
       cdif: {

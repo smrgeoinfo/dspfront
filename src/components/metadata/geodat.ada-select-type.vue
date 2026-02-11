@@ -75,7 +75,32 @@
         </v-list-item>
       </template>
 
-      <v-list-item v-if="!showGeneral && filteredMethods.length === 0">
+      <!-- CDIF Profiles section -->
+      <template v-if="filteredCdifProfiles.length > 0">
+        <v-divider v-if="showGeneral || filteredMethods.length > 0" />
+        <v-list-subheader>CDIF Profiles</v-list-subheader>
+
+        <v-list-item
+          v-for="profile in filteredCdifProfiles"
+          :key="profile.key"
+          :title="getProfileName(profile.key)"
+          :subtitle="getProfileDescription(profile.key)"
+          @click="selectProfile(profile.key)"
+        >
+          <template #prepend>
+            <v-icon color="teal">
+              mdi-atom
+            </v-icon>
+          </template>
+          <template #append>
+            <v-icon size="small">
+              mdi-chevron-right
+            </v-icon>
+          </template>
+        </v-list-item>
+      </template>
+
+      <v-list-item v-if="!showGeneral && filteredMethods.length === 0 && filteredCdifProfiles.length === 0">
         <v-list-item-title class="text-body-2 text-medium-emphasis text-center">
           No matching data types
         </v-list-item-title>
@@ -101,6 +126,7 @@ class GeodatAdaSelectType extends Vue {
   generalProfile: { key: string } | null = { key: 'adaProduct' }
 
   methodProfiles: { key: string }[] = []
+  cdifProfiles: { key: string }[] = []
 
   async created() {
     this.isLoading = true
@@ -115,6 +141,10 @@ class GeodatAdaSelectType extends Vue {
         .filter((p: any) => p.base_profile === 'adaProduct')
         .sort((a: any, b: any) => a.name.localeCompare(b.name))
         .map((p: any) => ({ key: p.name }))
+      this.cdifProfiles = profiles
+        .filter((p: any) => p.name.startsWith('CDIF') && p.name !== 'CDIFDiscovery')
+        .sort((a: any, b: any) => a.name.localeCompare(b.name))
+        .map((p: any) => ({ key: p.name }))
     }
     catch (e) {
       console.error('Failed to load profiles:', e)
@@ -125,6 +155,9 @@ class GeodatAdaSelectType extends Vue {
         { key: 'adaICPMS' },
         { key: 'adaVNMIR' },
         { key: 'adaXRD' },
+      ]
+      this.cdifProfiles = [
+        { key: 'CDIFxas' },
       ]
     }
     finally {
@@ -159,6 +192,10 @@ class GeodatAdaSelectType extends Vue {
 
   get filteredMethods() {
     return this.methodProfiles.filter(p => this.matchesSearch(p.key))
+  }
+
+  get filteredCdifProfiles() {
+    return this.cdifProfiles.filter(p => this.matchesSearch(p.key))
   }
 
   selectProfile(key: string) {

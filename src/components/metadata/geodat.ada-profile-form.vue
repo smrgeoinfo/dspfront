@@ -294,8 +294,9 @@ class GeodatAdaProfileForm extends Vue {
       adaXRD: 'ADA XRD Product Metadata',
       adaICPMS: 'ADA ICP-MS Product Metadata',
       adaVNMIR: 'ADA VNMIR Product Metadata',
+      CDIFxas: 'CDIF XAS Metadata',
     }
-    return profileNames[this.profileKey] || 'ADA Metadata'
+    return profileNames[this.profileKey] || 'Metadata'
   }
 
   get isCategorization(): boolean {
