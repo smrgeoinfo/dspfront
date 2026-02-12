@@ -329,7 +329,7 @@ class MetadataFormStep extends Vue {
         commonAttrs: {
           'density': 'compact',
           'variant': 'outlined',
-          'persistent-hint': true,
+          'persistent-hint': false,
           'hide-details': false,
         },
       },
@@ -969,29 +969,30 @@ export default toNative(MetadataFormStep)
   .v-input {
     margin-bottom: 2px !important;
   }
+}
 
-  // --------------------------------------------------
-  // Hover-to-show hints: hide descriptions/hints by
-  // default, reveal on hover or focus. Validation
-  // errors always remain visible.
-  // --------------------------------------------------
+// --------------------------------------------------
+// Hover-to-show hints (global, so it applies to
+// CzForm content rendered in dialogs/portals too).
+// Hide descriptions/hints by default, reveal on
+// hover or focus. Validation errors stay visible.
+// --------------------------------------------------
+.metadata-form-step .v-input:not(.v-input--error) .v-input__details,
+.v-overlay__content .v-input:not(.v-input--error) .v-input__details {
+  max-height: 0;
+  min-height: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+  transition: max-height 0.15s ease;
+}
 
-  // Collapse the details row (hint area) when idle
-  .v-input:not(.v-input--error) .v-input__details {
-    max-height: 0;
-    min-height: 0 !important;
-    padding: 0 !important;
-    overflow: hidden;
-    transition: max-height 0.15s ease;
-  }
-
-  // Expand on hover or when a child input has focus
-  .v-input:not(.v-input--error):hover .v-input__details,
-  .v-input:not(.v-input--error):focus-within .v-input__details {
-    max-height: 48px;
-    min-height: unset !important;
-    padding: 4px 16px 0 !important;
-    overflow: visible;
-  }
+.metadata-form-step .v-input:not(.v-input--error):hover .v-input__details,
+.metadata-form-step .v-input:not(.v-input--error):focus-within .v-input__details,
+.v-overlay__content .v-input:not(.v-input--error):hover .v-input__details,
+.v-overlay__content .v-input:not(.v-input--error):focus-within .v-input__details {
+  max-height: 48px;
+  min-height: unset !important;
+  padding: 4px 16px 0 !important;
+  overflow: visible;
 }
 </style>

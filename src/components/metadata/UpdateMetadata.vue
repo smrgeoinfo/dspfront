@@ -262,7 +262,17 @@ class UpdateMetadata extends Vue {
     }
     catch (e: any) {
       console.error('Failed to create draft record:', e)
-      this.error = e.response?.data?.detail || 'Failed to create draft record.'
+      const data = e.response?.data
+      if (data?.detail) {
+        this.error = data.detail
+      }
+      else if (data?.jsonld) {
+        const msgs = Array.isArray(data.jsonld) ? data.jsonld : [data.jsonld]
+        this.error = 'Validation errors: ' + msgs.join('; ')
+      }
+      else {
+        this.error = 'Failed to create draft record.'
+      }
     }
   }
 }

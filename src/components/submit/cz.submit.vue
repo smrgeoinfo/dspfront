@@ -31,6 +31,11 @@
         <div class="mb-4">
           <div class="repositories justify-space-around px-4">
             <cz-repository-submit-card
+              :repo="bundleWizardCardMetadata"
+              @click.enter="goToBundleWizard"
+            />
+
+            <cz-repository-submit-card
               v-for="repo of supportedRepoMetadata"
               :key="repo.key"
               :repo="repo"
@@ -58,11 +63,6 @@
             <cz-repository-submit-card
               :repo="updateMetadataCardMetadata"
               @click.enter="goToUpdateMetadata"
-            />
-
-            <cz-repository-submit-card
-              :repo="bundleWizardCardMetadata"
-              @click.enter="goToBundleWizard"
             />
           </div>
         </div>
@@ -127,8 +127,8 @@ class CzSubmit extends mixins(ActiveRepositoryMixin) {
 
   bundleWizardCardMetadata: IRepository = {
     key: EnumRepositoryKeys.ada,
-    name: 'ADA Bundle Wizard',
-    logoSrc: '/img/ada.png',
+    name: 'Astromaterials Data Archive (ADA)',
+    logoSrc: '/img/ieda_logo.png',
     description:
       'Upload a data bundle (ZIP), introspect file contents, fill metadata forms driven by OGC Building Block profiles, and push metadata to ADA.',
     isExternal: true,

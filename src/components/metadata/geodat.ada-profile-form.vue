@@ -389,6 +389,10 @@ class GeodatAdaProfileForm extends Vue {
       this.uischema = resp.data.uischema
       this.data = resp.data.defaults
 
+      // Flatten distribution schema from array to object so the uischema
+      // can scope directly into archive properties and hasPart file list.
+      this._flattenDistributionSchema()
+
       // Populate required metadata fields with initial values
       populateOnLoad(this.data)
 
@@ -401,6 +405,15 @@ class GeodatAdaProfileForm extends Vue {
         this.data = recordResp.data.jsonld
         this.recordId = recordResp.data.id
         this.identifier = recordResp.data.identifier
+
+        // Unwrap distribution array → object (matches flattened schema)
+        if (Array.isArray(this.data['schema:distribution'])) {
+          this.data['schema:distribution'] = this.data['schema:distribution'][0] || {}
+        }
+
+        // Unwrap encodingFormat arrays → strings (schema injection converts
+        // these to single-string for rule conditions; serializer wraps back)
+        this._unwrapEncodingFormats()
       }
 
       // Auto-populate maintainer with logged-in user info (new records only)
@@ -552,7 +565,13 @@ class GeodatAdaProfileForm extends Vue {
     reader.onload = (e) => {
       try {
         const parsed = JSON.parse(e.target?.result as string)
+        // Unwrap distribution array → object (matches flattened schema)
+        if (Array.isArray(parsed['schema:distribution'])) {
+          parsed['schema:distribution'] = parsed['schema:distribution'][0] || {}
+        }
         this.data = parsed
+        // Unwrap encodingFormat arrays → strings
+        this._unwrapEncodingFormats()
         this.timesChanged = 0
         this.hasUnsavedChanges = false
       }
@@ -573,12 +592,47 @@ class GeodatAdaProfileForm extends Vue {
     this.router.push({ name: 'submissions' })
   }
 
+  /** Convert schema:distribution from array schema to object schema so
+   *  the uischema can scope directly into its properties. */
+  _flattenDistributionSchema() {
+    const dist = this.schema?.properties?.['schema:distribution']
+    if (dist?.type === 'array' && dist.items) {
+      this.schema.properties['schema:distribution'] = {
+        ...dist.items,
+        description: dist.description || dist.items.description,
+      }
+    }
+  }
+
+  /** Unwrap encodingFormat arrays to plain strings in distribution and
+   *  hasPart items. The injected schema uses single-string encodingFormat
+   *  for rule conditions; the serializer wraps back to arrays on save. */
+  _unwrapEncodingFormats() {
+    const dist = this.data['schema:distribution']
+    if (!dist || typeof dist !== 'object') return
+
+    if (Array.isArray(dist['schema:encodingFormat'])) {
+      dist['schema:encodingFormat'] = dist['schema:encodingFormat'][0] || ''
+    }
+    for (const part of dist['schema:hasPart'] || []) {
+      if (part && Array.isArray(part['schema:encodingFormat'])) {
+        part['schema:encodingFormat'] = part['schema:encodingFormat'][0] || ''
+      }
+    }
+  }
+
   async onSave() {
     this.isSaving = true
 
     try {
       // Auto-populate @id, schema:about, and schema:sdDatePublished
       await populateOnSave(this.data)
+
+      // Wrap distribution object back to array for the canonical schema
+      const saveData = { ...this.data }
+      if (saveData['schema:distribution'] && !Array.isArray(saveData['schema:distribution'])) {
+        saveData['schema:distribution'] = [saveData['schema:distribution']]
+      }
 
       const url = this.recordId
         ? `${CATALOG_API}/records/${this.recordId}/`
@@ -587,7 +641,7 @@ class GeodatAdaProfileForm extends Vue {
 
       const response = await axios[method](url, {
         profile: this.profileId,
-        jsonld: this.data,
+        jsonld: saveData,
         ...(this.recordId ? {} : { status: 'draft' }),
       }, {
         headers: { 'Content-Type': 'application/json' },

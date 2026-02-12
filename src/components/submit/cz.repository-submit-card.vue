@@ -17,7 +17,7 @@
           </v-icon>
           <template v-if="!hideLogo">
             <v-card-title
-              v-if="!repo.isExternal"
+              v-if="!repo.isExternal || repo.logoSrc"
               class="v-card-media justify-center"
             >
               <div
