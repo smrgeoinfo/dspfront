@@ -37,6 +37,19 @@
     </div>
 
     <div v-if="!isLoading && schema">
+      <v-alert
+        v-if="adaStatus"
+        class="mb-4"
+        :type="adaStatus === 'error' ? 'error' : 'success'"
+        variant="outlined"
+        density="compact"
+      >
+        <div class="text-black">
+          <strong>ADA Status:</strong> {{ adaStatus }}
+          <span v-if="adaDoi" class="ml-2">| <strong>DOI:</strong> {{ adaDoi }}</span>
+        </div>
+      </v-alert>
+
       <div class="d-flex justify-end mb-4">
         <v-btn
           variant="outlined"
@@ -66,6 +79,17 @@
           @click="onSave"
         >
           {{ isEditMode ? 'Save Changes' : 'Save' }}
+        </v-btn>
+        <v-btn
+          v-if="isAdaProfile"
+          color="deep-purple"
+          variant="elevated"
+          class="ml-2"
+          :loading="isSubmittingToAda"
+          :disabled="!isEditMode || hasUnsavedChanges"
+          @click="onSubmitToAda"
+        >
+          Submit to ADA
         </v-btn>
       </div>
 
@@ -132,6 +156,17 @@
         >
           {{ isEditMode ? 'Save Changes' : 'Save' }}
         </v-btn>
+        <v-btn
+          v-if="isAdaProfile"
+          color="deep-purple"
+          variant="elevated"
+          class="ml-2"
+          :loading="isSubmittingToAda"
+          :disabled="!isEditMode || hasUnsavedChanges"
+          @click="onSubmitToAda"
+        >
+          Submit to ADA
+        </v-btn>
       </div>
     </div>
 
@@ -153,6 +188,27 @@
         <v-card-text>
           <p class="mb-4 text-center text-body-2">
             Saving...
+          </p>
+          <v-progress-linear
+            indeterminate
+            color="white"
+            class="mb-0"
+          />
+        </v-card-text>
+      </v-card>
+    </v-dialog>
+
+    <v-dialog
+      v-model="isSubmittingToAda"
+      no-click-animation
+      hide-overlay
+      persistent
+      width="300"
+    >
+      <v-card class="py-4" color="deep-purple" dark>
+        <v-card-text>
+          <p class="mb-4 text-center text-body-2">
+            Submitting to ADA...
           </p>
           <v-progress-linear
             indeterminate
@@ -245,6 +301,9 @@ class GeodatAdaProfileForm extends Vue {
   isValid = false
   isLoading = false
   isSaving = false
+  isSubmittingToAda = false
+  adaStatus: string | null = null
+  adaDoi: string | null = null
   errorMessage = ''
   validationErrors: string[] = []
   errors: { title: string; message: string }[] = []
@@ -256,6 +315,7 @@ class GeodatAdaProfileForm extends Vue {
   recordId: string | null = null
   showNewVariableDialog = false
   newVariable = { name: '', description: '', unitText: '' }
+  _categoryUischemaCache: Map<number, any> = new Map()
 
   get config() {
     return {
@@ -299,6 +359,10 @@ class GeodatAdaProfileForm extends Vue {
     return profileNames[this.profileKey] || 'Metadata'
   }
 
+  get isAdaProfile(): boolean {
+    return this.profileKey.startsWith('ada')
+  }
+
   get isCategorization(): boolean {
     return this.uischema?.type === 'Categorization'
   }
@@ -309,12 +373,17 @@ class GeodatAdaProfileForm extends Vue {
   }
 
   getCategoryUischema(index: number) {
+    const cached = this._categoryUischemaCache.get(index)
+    if (cached) return cached
+
     const category = this.categories[index]
     if (!category) return { type: 'VerticalLayout', elements: [] }
-    return {
+    const uischema = {
       type: 'VerticalLayout',
       elements: category.elements || [],
     }
+    this._categoryUischemaCache.set(index, uischema)
+    return uischema
   }
 
   get hasUnsavedChanges(): boolean {
@@ -387,6 +456,7 @@ class GeodatAdaProfileForm extends Vue {
       this.profileId = resp.data.id
       this.schema = resp.data.schema
       this.uischema = resp.data.uischema
+      this._categoryUischemaCache.clear()
       this.data = resp.data.defaults
 
       // Flatten distribution schema from array to object so the uischema
@@ -417,6 +487,11 @@ class GeodatAdaProfileForm extends Vue {
         // Unwrap encodingFormat arrays → strings (schema injection converts
         // these to single-string for rule conditions; serializer wraps back)
         this._unwrapEncodingFormats()
+
+        // Load ADA status if this is an ADA profile record
+        if (this.isAdaProfile) {
+          this._loadAdaStatus()
+        }
       }
 
       // Auto-populate maintainer with logged-in user info (new records only)
@@ -677,6 +752,75 @@ class GeodatAdaProfileForm extends Vue {
     }
   }
 
+  async _loadAdaStatus() {
+    if (!this.recordId) return
+    try {
+      const resp = await axios.get(`/api/ada-bridge/status/${this.recordId}/`, {
+        params: { access_token: User.$state.orcidAccessToken },
+      })
+      this.adaStatus = resp.data.ada_status || null
+      this.adaDoi = resp.data.ada_doi || null
+    }
+    catch {
+      // No ADA link yet — that's fine
+      this.adaStatus = null
+      this.adaDoi = null
+    }
+  }
+
+  async onSubmitToAda() {
+    if (!this.recordId) return
+    this.isSubmittingToAda = true
+    this.errorMessage = ''
+
+    try {
+      // Save locally first (same as onSave but don't navigate away)
+      await populateOnSave(this.data)
+
+      const saveData = { ...this.data }
+      if (saveData['schema:distribution'] && !Array.isArray(saveData['schema:distribution'])) {
+        saveData['schema:distribution'] = [saveData['schema:distribution']]
+      }
+
+      await axios.patch(`${CATALOG_API}/records/${this.recordId}/`, {
+        profile: this.profileId,
+        jsonld: saveData,
+      }, {
+        headers: { 'Content-Type': 'application/json' },
+        params: { access_token: User.$state.orcidAccessToken },
+      })
+
+      // Push to ADA
+      const pushResp = await axios.post(`/api/ada-bridge/push/${this.recordId}/`, {}, {
+        params: { access_token: User.$state.orcidAccessToken },
+      })
+
+      this.adaStatus = pushResp.data.ada_status || 'pushed'
+      this.adaDoi = pushResp.data.ada_doi || null
+      this.hasUnsavedChanges = false
+
+      Notifications.toast({
+        message: 'Record submitted to ADA successfully!',
+        type: 'success',
+      })
+    }
+    catch (e: any) {
+      console.error('Failed to submit to ADA:', e)
+      if (e.response?.data?.ada_error) {
+        this.errorMessage = `ADA error: ${JSON.stringify(e.response.data.ada_error)}`
+      }
+      else {
+        Notifications.toast({
+          message: 'Failed to submit to ADA',
+          type: 'error',
+        })
+      }
+    }
+    finally {
+      this.isSubmittingToAda = false
+    }
+  }
+
   async onSave() {
     this.isSaving = true
 
@@ -721,17 +865,22 @@ class GeodatAdaProfileForm extends Vue {
     }
     catch (e: any) {
       console.error('Failed to save:', e)
-      if (e.response?.status === 400 && e.response?.data?.jsonld) {
+      const detail = e.response?.data
+      if (e.response?.status === 400 && detail?.jsonld) {
         this.errorMessage = 'Validation failed'
-        this.validationErrors = e.response.data.jsonld
+        this.validationErrors = detail.jsonld
       }
       else {
-        this.errorMessage = ''
+        this.errorMessage = detail
+          ? `Save failed (${e.response?.status}): ${JSON.stringify(detail)}`
+          : 'Failed to save metadata record'
         this.validationErrors = []
-        Notifications.toast({
-          message: 'Failed to save metadata record',
-          type: 'error',
-        })
+        if (!detail) {
+          Notifications.toast({
+            message: 'Failed to save metadata record',
+            type: 'error',
+          })
+        }
       }
     }
     finally {

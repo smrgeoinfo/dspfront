@@ -12,6 +12,8 @@ export interface CatalogRecord {
   identifier: string
   status: string
   jsonld: any
+  ada_status: string | null
+  ada_doi: string | null
   created_at: string
   updated_at: string
 }
@@ -313,7 +315,11 @@ export async function populateOnSave(data: any): Promise<void> {
   }
 
   // Wrap physicalMapping cdi:formats_InstanceVariable names back to @id objects
-  for (const dist of data['schema:distribution'] || []) {
+  // Distribution may be a single object (flattened for form) or an array
+  const distributions = Array.isArray(data['schema:distribution'])
+    ? data['schema:distribution']
+    : data['schema:distribution'] ? [data['schema:distribution']] : []
+  for (const dist of distributions) {
     if (dist && typeof dist === 'object') {
       const fd = dist.fileDetail
       if (fd && typeof fd === 'object')

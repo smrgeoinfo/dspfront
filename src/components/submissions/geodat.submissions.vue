@@ -493,6 +493,25 @@
                           </v-chip>
                         </td>
                       </tr>
+                      <tr v-if="record.ada_status">
+                        <th class="pr-4 text-body-2">
+                          ADA Status:
+                        </th>
+                        <td>
+                          <v-chip
+                            :color="record.ada_status === 'error' ? 'red' : record.ada_status === 'processed' ? 'green' : 'blue'"
+                            size="small"
+                          >
+                            {{ record.ada_status }}
+                          </v-chip>
+                        </td>
+                      </tr>
+                      <tr v-if="record.ada_doi">
+                        <th class="pr-4 text-body-2">
+                          ADA DOI:
+                        </th>
+                        <td>{{ record.ada_doi }}</td>
+                      </tr>
                       <tr>
                         <th class="pr-4 text-body-2">
                           Updated:
@@ -511,6 +530,18 @@
                     <v-icon class="mr-1">
                       mdi-pencil-outline
                     </v-icon> Edit
+                  </v-btn>
+                  <v-btn
+                    v-if="isAdaCatalogRecord(record)"
+                    color="deep-purple"
+                    :loading="adaPushing[record.id]"
+                    rounded
+                    @click="onPushToAda(record)"
+                  >
+                    <v-icon class="mr-1">
+                      mdi-cloud-upload-outline
+                    </v-icon>
+                    {{ record.ada_status ? 'Re-push to ADA' : 'Push to ADA' }}
                   </v-btn>
                   <v-btn
                     :href="`/api/catalog/records/${record.id}/jsonld/`"
@@ -654,6 +685,7 @@ import Repository from '~/models/repository.model'
 import Submission from '~/models/submission.model'
 import User from '~/models/user.model'
 import { isRepositoryAuthorized } from '~/util'
+import axios from 'axios'
 import { fetchMyRecords, deleteRecord } from '~/services/catalog'
 import type { CatalogRecord } from '~/services/catalog'
 import { Notifications } from '@cznethub/cznet-vue-core'
@@ -693,6 +725,7 @@ class GeodatSubmissions extends mixins(ActiveRepositoryMixin) {
   catalogRecords: CatalogRecord[] = []
   isFetchingCatalog = false
   catalogDeleting: { [key: string]: boolean } = {}
+  adaPushing: { [key: string]: boolean } = {}
   isCatalogDeleteDialogActive = false
   catalogRecordToDelete: CatalogRecord | null = null
 
@@ -827,6 +860,32 @@ class GeodatSubmissions extends mixins(ActiveRepositoryMixin) {
     }
     else {
       this.router.push({ path: `/metadata/ada/${record.profile_name}`, query: { record: record.id } })
+    }
+  }
+
+  isAdaCatalogRecord(record: CatalogRecord): boolean {
+    return record.profile_name?.startsWith('ada') || false
+  }
+
+  async onPushToAda(record: CatalogRecord) {
+    this.adaPushing[record.id] = true
+    try {
+      const resp = await axios.post(`/api/ada-bridge/push/${record.id}/`, {}, {
+        params: { access_token: User.$state.orcidAccessToken },
+      })
+      // Update local record state
+      record.ada_status = resp.data.ada_status || 'pushed'
+      record.ada_doi = resp.data.ada_doi || null
+      record.status = 'published'
+      Notifications.toast({ message: 'Record pushed to ADA successfully!', type: 'success' })
+    }
+    catch (e: any) {
+      console.error('Failed to push to ADA:', e)
+      const detail = e.response?.data?.ada_error || e.response?.data?.detail || 'Unknown error'
+      Notifications.toast({ message: `Failed to push to ADA: ${detail}`, type: 'error' })
+    }
+    finally {
+      this.adaPushing[record.id] = false
     }
   }
 
