@@ -116,13 +116,13 @@
           >
             <cz-form
               ref="form"
-              v-model="data"
+              :model-value="formData"
               v-model:is-valid="tabValidity[index]"
               :schema="schema"
               :uischema="getCategoryUischema(index)"
               :config="config"
               @update:errors="onUpdateErrors"
-              @update:model-value="onDataChange"
+              @update:model-value="onFormModelUpdate"
             />
           </v-tabs-window-item>
         </v-tabs-window>
@@ -131,13 +131,13 @@
       <cz-form
         v-else
         ref="form"
-        v-model="data"
+        :model-value="formData"
         v-model:is-valid="isValid"
         :schema="schema"
         :uischema="uischema"
         :config="config"
         @update:errors="onUpdateErrors"
-        @update:model-value="onDataChange"
+        @update:model-value="onFormModelUpdate"
       />
 
       <div class="d-flex justify-end mt-4">
@@ -278,12 +278,14 @@ import { CzForm, Notifications } from '@cznethub/cznet-vue-core'
 import { Component, Hook, toNative, Vue } from 'vue-facing-decorator'
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
 import { useRoute, useRouter } from 'vue-router'
+import { toRaw } from 'vue'
 import axios from 'axios'
 import User from '~/models/user.model'
 import { hasUnsavedChangesGuard } from '~/guards'
 import { fetchUserInfo, generateVariableId, populateMaintainer, populateOnLoad, populateOnSave } from '~/services/catalog'
 
 const CATALOG_API = '/api/catalog'
+const ADD_VARIABLE_SENTINEL = '+ Add new variable...'
 
 @Component({
   name: 'geodat-ada-profile-form',
@@ -316,6 +318,7 @@ class GeodatAdaProfileForm extends Vue {
   showNewVariableDialog = false
   newVariable = { name: '', description: '', unitText: '' }
   _categoryUischemaCache: Map<number, any> = new Map()
+  _lastVariableNames: string[] | null = null
 
   get config() {
     return {
@@ -337,6 +340,12 @@ class GeodatAdaProfileForm extends Vue {
         },
       },
     }
+  }
+
+  /** Return the raw (un-Proxied) data object so JsonForms receives the same
+   *  reference it emitted, preventing unnecessary full core re-initializations. */
+  get formData() {
+    return toRaw(this.data)
   }
 
   get profileKey(): string {
@@ -400,53 +409,6 @@ class GeodatAdaProfileForm extends Vue {
     this.loadSchemas()
   }
 
-  updated() {
-    this.$nextTick(() => this._injectNewVariableButtons())
-  }
-
-  /**
-   * Inject a "New Variable" button into each Physical Mapping array toolbar.
-   * CzForm doesn't support custom buttons in UISchema, so we find the
-   * rendered array controls by their label text and inject a button into
-   * the toolbar next to the existing "+" add button.
-   */
-  _injectNewVariableButtons() {
-    const container = this.$el as HTMLElement
-    if (!container) return
-
-    // Find all array labels (both array-list and list-with-detail variants)
-    const labels = container.querySelectorAll('.array-list-label, .list-with-detail-label')
-    for (const label of labels) {
-      if (label.textContent?.trim() !== 'Physical Mapping') continue
-
-      // Find the parent toolbar
-      const toolbar = label.closest('.array-list-toolbar, .list-with-detail-toolbar')
-      if (!toolbar) continue
-
-      // Don't inject if already present
-      if (toolbar.querySelector('.new-variable-btn')) continue
-
-      const btn = document.createElement('button')
-      btn.className = 'new-variable-btn v-btn v-btn--density-compact v-btn--size-small v-btn--variant-tonal v-theme--light'
-      btn.type = 'button'
-      btn.style.cssText = 'margin-left: 8px; font-size: 0.75rem; padding: 0 8px; height: 28px; min-width: auto; border-radius: 4px; cursor: pointer; background-color: rgb(var(--v-theme-primary)); color: white;'
-      btn.textContent = '+ New Variable'
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation()
-        this.showNewVariableDialog = true
-      })
-
-      // Insert after the label, before the add button
-      const addBtn = toolbar.querySelector('.array-list-add, .list-with-detail-add')
-      if (addBtn) {
-        toolbar.insertBefore(btn, addBtn)
-      }
-      else {
-        toolbar.appendChild(btn)
-      }
-    }
-  }
-
   async loadSchemas() {
     this.isLoading = true
     this.errorMessage = ''
@@ -466,6 +428,25 @@ class GeodatAdaProfileForm extends Vue {
       // Populate required metadata fields with initial values
       populateOnLoad(this.data, this.schema)
 
+      // Unwrap distribution array → single object (matches flattened schema)
+      if (Array.isArray(this.data['schema:distribution'])) {
+        this.data['schema:distribution'] = this.data['schema:distribution'][0] || {}
+      }
+
+      // Set profile-specific productType default from schema (new records only).
+      // The conversion pipeline flattens additionalType from array to string
+      // with oneOf so CzForm renders a labeled dropdown.
+      const atSchema = this.schema?.properties?.['schema:additionalType']
+      const atOneOf = atSchema?.oneOf
+      const atEnum = atSchema?.enum
+      if (!this.route.query.record) {
+        if (atOneOf?.length) {
+          this.data['schema:additionalType'] = atOneOf[0].const
+        } else if (atEnum?.length) {
+          this.data['schema:additionalType'] = atEnum[0]
+        }
+      }
+
       // If editing an existing record, load it
       const recordParam = this.route.query.record as string
       if (recordParam) {
@@ -478,6 +459,9 @@ class GeodatAdaProfileForm extends Vue {
 
         // Normalize imported data to match adaProduct schema expectations
         this._normalizeImportedData()
+
+        // Unwrap additionalType array → string (matches flattened schema)
+        this._unwrapAdditionalType()
 
         // Unwrap distribution array → object (matches flattened schema)
         if (Array.isArray(this.data['schema:distribution'])) {
@@ -519,6 +503,39 @@ class GeodatAdaProfileForm extends Vue {
     this.errors = errors
   }
 
+  onFormModelUpdate(newData: any) {
+    // Check if any physicalMapping variable was set to the sentinel
+    if (this._clearSentinelAndOpenDialog(newData)) {
+      this.data = newData
+      return  // Don't trigger onDataChange — the field was just cleared
+    }
+    this.data = newData
+    this.onDataChange(newData)
+  }
+
+  /**
+   * Walk the data tree looking for any cdi:formats_InstanceVariable set to
+   * the "Add new variable" sentinel. If found, clear it and open the dialog.
+   */
+  _clearSentinelAndOpenDialog(node: any): boolean {
+    if (!node || typeof node !== 'object') return false
+    if (Array.isArray(node)) {
+      for (const item of node) {
+        if (this._clearSentinelAndOpenDialog(item)) return true
+      }
+      return false
+    }
+    if (node['cdi:formats_InstanceVariable'] === ADD_VARIABLE_SENTINEL) {
+      node['cdi:formats_InstanceVariable'] = ''
+      this.showNewVariableDialog = true
+      return true
+    }
+    for (const key of Object.keys(node)) {
+      if (this._clearSentinelAndOpenDialog(node[key])) return true
+    }
+    return false
+  }
+
   onDataChange(_data: any) {
     const changesDuringInstantiation = 3
 
@@ -549,14 +566,31 @@ class GeodatAdaProfileForm extends Vue {
       }
     }
 
-    if (!variables.length)
-      return
-
     // Build enum of variable names (users see names; we convert to @id on save)
     const nameEnum = variables.map(v => v.name)
 
+    // Only mutate schema when variable names actually changed — schema
+    // mutations cause CzForm to re-render which resets form fields.
+    if (this._lastVariableNames !== null) {
+      const same = nameEnum.length === this._lastVariableNames.length
+        && nameEnum.every((n, i) => n === this._lastVariableNames![i])
+      if (same)
+        return
+    }
+
+    this._lastVariableNames = nameEnum
+
+    // Append sentinel option to let users create a new variable from the dropdown
+    const enumWithAdd = [...nameEnum, ADD_VARIABLE_SENTINEL]
+
     // Deep-walk schema to find all cdi:formats_InstanceVariable properties and set enum
-    this._setFormatsVariableEnum(this.schema, nameEnum)
+    this._setFormatsVariableEnum(this.schema, enumWithAdd)
+
+    // Trigger CzForm re-init by creating a new schema reference.
+    // The _lastVariableNames guard above ensures this only fires
+    // when variable names actually change (not on every keystroke).
+    this.schema = { ...this.schema }
+    this._categoryUischemaCache.clear()
   }
 
   /**
@@ -648,8 +682,9 @@ class GeodatAdaProfileForm extends Vue {
           parsed['schema:distribution'] = parsed['schema:distribution'][0] || {}
         }
         this.data = parsed
-        // Normalize imported data and unwrap encodingFormat arrays
+        // Normalize imported data and unwrap flattened fields
         this._normalizeImportedData()
+        this._unwrapAdditionalType()
         this._unwrapEncodingFormats()
         this.timesChanged = 0
         this.hasUnsavedChanges = false
@@ -697,6 +732,15 @@ class GeodatAdaProfileForm extends Vue {
       if (part && Array.isArray(part['schema:encodingFormat'])) {
         part['schema:encodingFormat'] = part['schema:encodingFormat'][0] || ''
       }
+    }
+  }
+
+  /** Unwrap schema:additionalType array to plain string. The conversion
+   *  pipeline flattens this to a string with oneOf for CzForm's dropdown
+   *  renderer; we wrap back to array on save. */
+  _unwrapAdditionalType() {
+    if (Array.isArray(this.data['schema:additionalType'])) {
+      this.data['schema:additionalType'] = this.data['schema:additionalType'][0] || ''
     }
   }
 
@@ -778,6 +822,9 @@ class GeodatAdaProfileForm extends Vue {
       await populateOnSave(this.data)
 
       const saveData = { ...this.data }
+      if (saveData['schema:additionalType'] && !Array.isArray(saveData['schema:additionalType'])) {
+        saveData['schema:additionalType'] = [saveData['schema:additionalType']]
+      }
       if (saveData['schema:distribution'] && !Array.isArray(saveData['schema:distribution'])) {
         saveData['schema:distribution'] = [saveData['schema:distribution']]
       }
@@ -828,8 +875,11 @@ class GeodatAdaProfileForm extends Vue {
       // Auto-populate @id, schema:about, and schema:sdDatePublished
       await populateOnSave(this.data)
 
-      // Wrap distribution object back to array for the canonical schema
+      // Wrap flattened fields back to arrays for the canonical JSON-LD schema
       const saveData = { ...this.data }
+      if (saveData['schema:additionalType'] && !Array.isArray(saveData['schema:additionalType'])) {
+        saveData['schema:additionalType'] = [saveData['schema:additionalType']]
+      }
       if (saveData['schema:distribution'] && !Array.isArray(saveData['schema:distribution'])) {
         saveData['schema:distribution'] = [saveData['schema:distribution']]
       }
