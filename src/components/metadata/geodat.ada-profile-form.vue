@@ -394,7 +394,7 @@ class GeodatAdaProfileForm extends Vue {
       this._flattenDistributionSchema()
 
       // Populate required metadata fields with initial values
-      populateOnLoad(this.data)
+      populateOnLoad(this.data, this.schema)
 
       // If editing an existing record, load it
       const recordParam = this.route.query.record as string
@@ -405,6 +405,9 @@ class GeodatAdaProfileForm extends Vue {
         this.data = recordResp.data.jsonld
         this.recordId = recordResp.data.id
         this.identifier = recordResp.data.identifier
+
+        // Normalize imported data to match adaProduct schema expectations
+        this._normalizeImportedData()
 
         // Unwrap distribution array → object (matches flattened schema)
         if (Array.isArray(this.data['schema:distribution'])) {
@@ -570,7 +573,8 @@ class GeodatAdaProfileForm extends Vue {
           parsed['schema:distribution'] = parsed['schema:distribution'][0] || {}
         }
         this.data = parsed
-        // Unwrap encodingFormat arrays → strings
+        // Normalize imported data and unwrap encodingFormat arrays
+        this._normalizeImportedData()
         this._unwrapEncodingFormats()
         this.timesChanged = 0
         this.hasUnsavedChanges = false
@@ -617,6 +621,58 @@ class GeodatAdaProfileForm extends Vue {
     for (const part of dist['schema:hasPart'] || []) {
       if (part && Array.isArray(part['schema:encodingFormat'])) {
         part['schema:encodingFormat'] = part['schema:encodingFormat'][0] || ''
+      }
+    }
+  }
+
+  /** Normalize imported JSON-LD to match adaProduct schema expectations.
+   *  Handles structural differences between old ADA format and current schema. */
+  _normalizeImportedData() {
+    const d = this.data
+    if (!d) return
+
+    // schema:identifier — convert object {schema:value, schema:url} to plain string (DOI)
+    const ident = d['schema:identifier']
+    if (ident && typeof ident === 'object') {
+      d['schema:identifier'] = ident['schema:value'] || ident['schema:url'] || ''
+    }
+
+    // schema:sdDatePublished — convert date to date-time
+    const subj = d['schema:subjectOf']
+    if (subj && typeof subj === 'object') {
+      const sdp = subj['schema:sdDatePublished']
+      if (sdp && typeof sdp === 'string' && !sdp.includes('T')) {
+        subj['schema:sdDatePublished'] = sdp + 'T00:00:00Z'
+      }
+    }
+
+    // schema:datePublished — convert date to date-time if needed
+    if (d['schema:datePublished'] && typeof d['schema:datePublished'] === 'string'
+      && !d['schema:datePublished'].includes('T')) {
+      d['schema:datePublished'] = d['schema:datePublished'] + 'T00:00:00Z'
+    }
+
+    // schema:measurementTechnique — schema expects object with specific structure;
+    // ensure @type is array if present as string
+    const mt = d['schema:measurementTechnique']
+    if (mt && typeof mt === 'object' && typeof mt['@type'] === 'string') {
+      mt['@type'] = [mt['@type']]
+    }
+
+    // schema:license — schema expects array of objects, old format has array of strings
+    if (Array.isArray(d['schema:license'])) {
+      d['schema:license'] = d['schema:license'].map((lic: any) => {
+        if (typeof lic === 'string') {
+          return { '@type': 'schema:CreativeWork', 'schema:name': lic }
+        }
+        return lic
+      })
+    }
+
+    // schema:funding — if entry has description but no name, use description as grant name
+    for (const fund of d['schema:funding'] || []) {
+      if (fund && typeof fund === 'object' && fund['schema:description'] && !fund['schema:name']) {
+        fund['schema:name'] = fund['schema:description']
       }
     }
   }

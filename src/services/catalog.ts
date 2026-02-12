@@ -108,12 +108,41 @@ export async function generateVariableId(name: string): Promise<string> {
 }
 
 /**
+ * Per-category componentType UI properties.
+ * Order matters: first match wins when populating from componentType.@type.
+ */
+const _CATEGORY_CT_PROPS = [
+  '_imageComponentType', '_tabularComponentType',
+  '_dataCubeComponentType', '_documentComponentType',
+]
+
+/**
+ * Populate the correct _*ComponentType UI property from componentType.@type.
+ * Reads the injected enum lists from the schema to determine which category
+ * the value belongs to.
+ */
+function _populateCategoryComponentType(fileDetail: any, fdSchemaProps: any): void {
+  const ct = fileDetail?.componentType?.['@type']
+  if (!ct) return
+  for (const prop of _CATEGORY_CT_PROPS) {
+    const enumVals: string[] = fdSchemaProps?.[prop]?.enum || []
+    if (enumVals.includes(ct)) {
+      fileDetail[prop] = ct
+      return
+    }
+  }
+}
+
+/**
  * Auto-populate required metadata fields on form load so validation passes.
  * Sets temporary @id, schema:subjectOf.@id, schema:subjectOf.schema:about,
  * and schema:subjectOf.schema:sdDatePublished with initial values.
  * These get overwritten with proper values on save via populateOnSave().
+ *
+ * @param schema Optional JSON schema — when provided, populates per-category
+ *               componentType UI properties from componentType.@type values.
  */
-export function populateOnLoad(data: any): void {
+export function populateOnLoad(data: any, schema?: any): void {
   // Generate a temporary @id from a random value
   const tempId = `#${crypto.randomUUID().replace(/-/g, '')}`
   if (!data['@id'])
@@ -173,6 +202,25 @@ export function populateOnLoad(data: any): void {
       for (const part of dist['schema:hasPart'] || []) {
         if (part?.fileDetail && typeof part.fileDetail === 'object')
           _unwrapPhysicalMappingVariables(part.fileDetail, varLookup)
+      }
+
+      // Populate per-category componentType UI properties from componentType.@type
+      if (schema) {
+        const distSchema = schema.properties?.['schema:distribution']
+        // Schema may be flattened (object) or still array — handle both
+        const distItemProps = distSchema?.type === 'array'
+          ? distSchema?.items?.properties
+          : distSchema?.properties
+        const fdSchemaProps = distItemProps?.fileDetail?.properties
+        if (fdSchemaProps) {
+          if (fd && typeof fd === 'object')
+            _populateCategoryComponentType(fd, fdSchemaProps)
+          const hpSchemaProps = distItemProps?.['schema:hasPart']?.items?.properties?.fileDetail?.properties
+          for (const part of dist['schema:hasPart'] || []) {
+            if (part?.fileDetail && typeof part.fileDetail === 'object')
+              _populateCategoryComponentType(part.fileDetail, hpSchemaProps || fdSchemaProps)
+          }
+        }
       }
     }
   }

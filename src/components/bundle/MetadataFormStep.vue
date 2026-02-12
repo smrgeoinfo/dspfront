@@ -388,7 +388,7 @@ class MetadataFormStep extends Vue {
       // can lay out archive properties and file list as separate groups.
       this._flattenDistributionSchema()
 
-      populateOnLoad(this.data)
+      populateOnLoad(this.data, this.schema)
 
       // Pre-populate from product YAML if available
       if (this.sessionData?.product_yaml) {
