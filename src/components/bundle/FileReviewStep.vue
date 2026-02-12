@@ -213,14 +213,23 @@ class FileReviewStep extends Vue {
       }
 
       let summary = ''
-      if (info.columns && info.row_count) {
-        summary = `CSV: ${info.columns.length} columns, ${info.row_count} rows`
+      if (info.columns && info.row_count != null && info.sheet_count) {
+        summary = `Excel: ${info.sheet_count} sheet(s), ${info.columns.length} cols, ${info.row_count} rows`
+      }
+      else if (info.columns && info.row_count != null) {
+        summary = `${info.columns.length} columns, ${info.row_count} rows`
       }
       else if (info.width && info.height) {
         summary = `Image: ${info.width}×${info.height}`
       }
       else if (info.variables) {
         summary = `${info.variables.length} variables`
+      }
+      else if (info.page_count) {
+        summary = `PDF: ${info.page_count} page(s)`
+      }
+      else if (info.line_count) {
+        summary = `Text: ${info.line_count} lines`
       }
 
       return {

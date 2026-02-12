@@ -1,5 +1,5 @@
 <template>
-  <v-card flat>
+  <v-card flat class="metadata-form-step">
     <v-card-title class="text-h6">
       Metadata Form
     </v-card-title>
@@ -124,6 +124,9 @@
               :key="index"
               :value="index"
             >
+              <div v-if="category.label === 'Distribution' && commonFilePrefix" class="text-body-2 text-medium-emphasis mb-3 mt-1">
+                Common file prefix: <code>{{ commonFilePrefix }}</code>
+              </div>
               <cz-form
                 ref="form"
                 v-model="data"
@@ -306,6 +309,8 @@ class MetadataFormStep extends Vue {
   tabValidity: boolean[] = []
   profileId: number | null = null
 
+  commonFilePrefix = ''
+
   showNewVariableDialog = false
   newVariable = { name: '', description: '', unitText: '' }
 
@@ -379,6 +384,10 @@ class MetadataFormStep extends Vue {
       this.uischema = resp.data.uischema
       this.data = resp.data.defaults || {}
 
+      // Convert schema:distribution from array to object so the uischema
+      // can lay out archive properties and file list as separate groups.
+      this._flattenDistributionSchema()
+
       populateOnLoad(this.data)
 
       // Pre-populate from product YAML if available
@@ -389,6 +398,11 @@ class MetadataFormStep extends Vue {
       // Pre-populate from introspection if available (overrides product YAML)
       if (this.sessionData?.jsonld_draft) {
         this.data = { ...this.data, ...this.sessionData.jsonld_draft }
+      }
+
+      // Unwrap distribution array → object (data may come from jsonld_draft)
+      if (Array.isArray(this.data['schema:distribution'])) {
+        this.data['schema:distribution'] = this.data['schema:distribution'][0] || {}
       }
 
       // Pre-populate from bundle files — add variables from CSV columns
@@ -422,32 +436,46 @@ class MetadataFormStep extends Vue {
     const variables: any[] = this.data['schema:variableMeasured'] || []
 
     for (const file of this.bundleFiles) {
+      // CSV / Excel columns → variableMeasured
       if (file.inspection?.columns) {
         for (const col of file.inspection.columns) {
-          const colName = typeof col === 'string' ? col : col.name
-          if (!colName) continue
-          const exists = variables.some((v: any) => v['schema:name'] === colName)
+          const colLabel = typeof col === 'string' ? col : (col.label || col.name)
+          if (!colLabel) continue
+          const exists = variables.some((v: any) => v['schema:name'] === colLabel)
           if (!exists) {
-            variables.push({
+            let desc = col.name && col.name !== colLabel ? col.name : colLabel
+            if (desc.length < 10) desc = desc.padEnd(10, '.')
+            const entry: any = {
               '@type': ['schema:PropertyValue', 'cdi:InstanceVariable'],
-              'schema:name': colName,
-              'schema:description': col.dtype ? `${colName} (${col.dtype})` : colName,
-            })
+              'schema:name': colLabel,
+              'schema:description': desc,
+            }
+            if (col.unit) entry['schema:unitText'] = col.unit
+            if (col.min_val != null) entry['schema:minValue'] = col.min_val
+            if (col.max_val != null) entry['schema:maxValue'] = col.max_val
+            variables.push(entry)
           }
         }
       }
 
+      // HDF5 / NetCDF variables → variableMeasured
       if (file.inspection?.variables) {
         for (const varInfo of file.inspection.variables) {
           const varName = typeof varInfo === 'string' ? varInfo : varInfo.name
           if (!varName) continue
           const exists = variables.some((v: any) => v['schema:name'] === varName)
           if (!exists) {
-            variables.push({
+            let varDesc = varInfo.description || varInfo.long_name || varName
+            if (varDesc.length < 10) varDesc = varDesc.padEnd(10, '.')
+            const entry: any = {
               '@type': ['schema:PropertyValue', 'cdi:InstanceVariable'],
               'schema:name': varName,
-              'schema:description': varInfo.long_name || varName,
-            })
+              'schema:description': varDesc,
+            }
+            if (varInfo.unit) entry['schema:unitText'] = varInfo.unit
+            if (varInfo.min_val != null) entry['schema:minValue'] = varInfo.min_val
+            if (varInfo.max_val != null) entry['schema:maxValue'] = varInfo.max_val
+            variables.push(entry)
           }
         }
       }
@@ -459,39 +487,130 @@ class MetadataFormStep extends Vue {
     }
   }
 
+  /** Convert schema:distribution from array schema to object schema so
+   *  the uischema can scope directly into its properties (archive info
+   *  and hasPart file list) as separate top-level groups. */
+  _flattenDistributionSchema() {
+    const dist = this.schema?.properties?.['schema:distribution']
+    if (dist?.type === 'array' && dist.items) {
+      this.schema.properties['schema:distribution'] = {
+        ...dist.items,
+        description: dist.description || dist.items.description,
+      }
+    }
+  }
+
   prePopulateDistribution() {
     if (!this.bundleFiles?.length) return
     // Don't overwrite if distribution was already populated (e.g. from jsonld_draft)
-    if (this.data['schema:distribution']?.length) return
+    const existing = this.data['schema:distribution']
+    if (existing && typeof existing === 'object' && Object.keys(existing).length > 0) return
 
-    // Build one distribution entry per included file (excluding product YAML).
-    // Use the full path from the ZIP manifest so directory structure is visible.
-    const distributions: any[] = []
-    for (const file of this.bundleFiles) {
-      if (file.componentType === 'Product description') continue
+    // Use original filename from upload step (bundle_path is a server temp name)
+    const zipName = this.sessionData?._originalFilename || 'bundle.zip'
 
-      const entry: any = {
+    // Collect data files (excluding product YAML)
+    const dataFiles = this.bundleFiles.filter(f => f.componentType !== 'Product description')
+
+    // Derive common prefix from FileReviewStep's displayName stripping.
+    // If the first file's basename differs from its displayName, the difference is the prefix.
+    if (dataFiles.length > 0) {
+      const firstBasename = dataFiles[0].path.replace(/^.*[\\/]/, '')
+      if (firstBasename.endsWith(dataFiles[0].displayName) && firstBasename.length > dataFiles[0].displayName.length) {
+        this.commonFilePrefix = firstBasename.slice(0, firstBasename.length - dataFiles[0].displayName.length)
+      } else {
+        this.commonFilePrefix = ''
+      }
+    }
+
+    // Build hasPart entries — use displayName (already prefix-stripped by FileReviewStep)
+    const hasPart: any[] = []
+    for (const file of dataFiles) {
+      const part: any = {
         '@type': ['schema:DataDownload'],
-        'schema:name': file.path,
-        'schema:encodingFormat': [file.mimeType],
+        'schema:name': file.displayName,
+        'schema:encodingFormat': file.mimeType,
       }
 
       if (file.componentType) {
-        entry['schema:additionalType'] = [file.componentType]
+        part['schema:additionalType'] = [file.componentType]
       }
 
       if (file.inspection?.size) {
-        entry['schema:size'] = {
+        part['schema:size'] = {
           '@type': 'schema:QuantitativeValue',
           'schema:value': file.inspection.size,
           'schema:unitText': 'byte',
         }
       }
 
-      distributions.push(entry)
+      // Use PDF/text extracted description if available
+      if (file.inspection?.description) {
+        part['schema:description'] = file.inspection.description
+      }
+
+      // Build fileDetail with physical mapping for tabular/structured data
+      if (file.inspection?.columns?.length) {
+        const fd: any = {}
+        // CSV/delimited metadata
+        if (file.inspection.delimiter) {
+          fd['csvw:delimiter'] = file.inspection.delimiter
+          fd['csvw:header'] = true
+          fd['csvw:headerRowCount'] = 1
+        }
+        if (file.inspection.row_count != null) fd['countRows'] = file.inspection.row_count
+        fd['countColumns'] = file.inspection.columns.length
+
+        // Physical mapping: one entry per column, linking index → variable name
+        fd['cdi:hasPhysicalMapping'] = file.inspection.columns.map((col: any) => {
+          const label = typeof col === 'string' ? col : (col.label || col.name)
+          const entry: any = {
+            'cdi:index': col.index ?? 0,
+            'cdi:formats_InstanceVariable': label,
+          }
+          if (col.data_type) entry['cdi:physicalDataType'] = col.data_type
+          return entry
+        })
+
+        part['fileDetail'] = fd
+        part['_showPhysicalStructure'] = true
+      }
+      // HDF5/NetCDF variables → physical mapping
+      else if (file.inspection?.variables?.length) {
+        const fd: any = {}
+        fd['cdi:hasPhysicalMapping'] = file.inspection.variables.map((v: any, idx: number) => {
+          const entry: any = {
+            'cdi:index': idx,
+            'cdi:formats_InstanceVariable': v.name,
+          }
+          if (v.data_type) entry['cdi:physicalDataType'] = v.data_type
+          if (v.path) entry['cdi:locator'] = v.path
+          return entry
+        })
+
+        part['fileDetail'] = fd
+        part['_showPhysicalStructure'] = true
+      }
+
+      hasPart.push(part)
     }
 
-    this.data['schema:distribution'] = distributions
+    // Archive size from introspection (actual ZIP file size on disk)
+    const archiveSize = this.sessionData?.introspection_result?.archive_size || 0
+
+    // Single object (schema was flattened from array → object)
+    this.data['schema:distribution'] = {
+      '@type': ['schema:DataDownload'],
+      'schema:name': zipName,
+      'schema:encodingFormat': 'application/zip',
+      'schema:description': 'This data product is distributed in a zip archive; contents of the archive are listed as parts. The component files are not individually accessible.',
+      'schema:size': {
+        '@type': 'schema:QuantitativeValue',
+        'schema:value': archiveSize,
+        'schema:unitText': 'byte',
+      },
+      'schema:hasPart': hasPart,
+    }
     this.data = { ...this.data }
   }
 
@@ -597,12 +716,41 @@ class MetadataFormStep extends Vue {
       }
 
       // sampleIdentifier → Samples (schema:mainEntity)
-      if (py.sampleIdentifier) {
-        const sampleIds = Array.isArray(py.sampleIdentifier) ? py.sampleIdentifier : [py.sampleIdentifier]
-        activity['schema:mainEntity'] = [{
-          '@type': ['schema:Thing', 'https://w3id.org/isample/vocabulary/materialsampleobjecttype/materialsample'],
-          'schema:identifier': sampleIds,
-        }]
+      // Create one entry per sample. Also scan column headers for
+      // standard persistent identifiers (IGSN, DOI, ARK).
+      {
+        const sampleSet = new Set<string>()
+
+        // From product YAML (may be string or array)
+        if (py.sampleIdentifier) {
+          const ids = Array.isArray(py.sampleIdentifier) ? py.sampleIdentifier : [py.sampleIdentifier]
+          for (const id of ids) {
+            if (typeof id === 'string' && id.trim()) sampleSet.add(id.trim())
+          }
+        }
+
+        // Scan inspected column headers for sample identifiers:
+        // standard PIDs (IGSN, DOI, ARK) and OREX- identifiers
+        const stdIdRe = /(?:https?:\/\/)?(?:igsn\.org|doi\.org|n2t\.net\/ark:)[^\s,;)}\]]+|(?:igsn|doi|ark):[^\s,;)}\]]+|OREX-\d+(?:-\d+)*/gi
+        if (this.bundleFiles?.length) {
+          for (const file of this.bundleFiles) {
+            for (const col of file.inspection?.columns || []) {
+              const label = typeof col === 'string' ? col : (col.label || col.name || '')
+              let m
+              while ((m = stdIdRe.exec(label)) !== null) {
+                sampleSet.add(m[0])
+              }
+            }
+          }
+        }
+
+        // Create one schema:mainEntity entry per unique sample
+        if (sampleSet.size > 0) {
+          activity['schema:mainEntity'] = [...sampleSet].map(id => ({
+            '@type': ['schema:Thing', 'https://w3id.org/isample/vocabulary/materialsampleobjecttype/materialsample'],
+            'schema:identifier': id,
+          }))
+        }
       }
 
       // Only add if we have at least some data
@@ -630,7 +778,17 @@ class MetadataFormStep extends Vue {
       const types = Array.isArray(py.dataComponentType) ? py.dataComponentType : [py.dataComponentType]
       keywords.push(...types)
     }
-    if (py.sampleIdentifier) keywords.push(`Sample: ${py.sampleIdentifier}`)
+    // Include all discovered sample IDs as keywords
+    const activities = this.data['prov:wasGeneratedBy'] || []
+    if (activities.length) {
+      const samples = activities[0]['schema:mainEntity'] || []
+      for (const s of samples) {
+        const sid = s['schema:identifier']
+        if (sid) keywords.push(`Sample: ${sid}`)
+      }
+    } else if (py.sampleIdentifier) {
+      keywords.push(`Sample: ${py.sampleIdentifier}`)
+    }
     if (keywords.length) {
       this.data['schema:keywords'] = keywords
     }
@@ -666,7 +824,20 @@ class MetadataFormStep extends Vue {
   }
 
   onDataChange() {
+    this._normalizeDateTimeFields()
     this.updateVariableOptions()
+  }
+
+  /** Auto-append T00:00:00Z to date-only strings for fields with format: date-time */
+  _normalizeDateTimeFields() {
+    const dateOnlyRe = /^\d{4}-\d{2}-\d{2}$/
+    const subjectOf = this.data?.['schema:subjectOf']
+    if (subjectOf && typeof subjectOf === 'object') {
+      const val = subjectOf['schema:sdDatePublished']
+      if (typeof val === 'string' && dateOnlyRe.test(val)) {
+        subjectOf['schema:sdDatePublished'] = val + 'T00:00:00Z'
+      }
+    }
   }
 
   async updateVariableOptions() {
@@ -761,8 +932,14 @@ class MetadataFormStep extends Vue {
 
   @Emit('continue')
   onContinue() {
+    this._normalizeDateTimeFields()
+    // Wrap distribution object back to array for the canonical schema
+    const output = { ...this.data }
+    if (output['schema:distribution'] && !Array.isArray(output['schema:distribution'])) {
+      output['schema:distribution'] = [output['schema:distribution']]
+    }
     return {
-      data: this.data,
+      data: output,
       profileId: this.profileId,
       profileKey: this.profileKey,
     }
@@ -774,13 +951,47 @@ export default toNative(MetadataFormStep)
 
 <style lang="scss">
 .metadata-form-step {
+  // --------------------------------------------------
+  // Compact group spacing
+  // --------------------------------------------------
   .cz-group.my-5 {
-    margin-top: 8px !important;
-    margin-bottom: 8px !important;
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
   }
   .cz-group > .v-card-text {
-    padding-top: 8px;
-    padding-bottom: 4px;
+    padding-top: 4px;
+    padding-bottom: 2px;
+  }
+
+  // --------------------------------------------------
+  // Tight field spacing (~6pt between fields)
+  // --------------------------------------------------
+  .v-input {
+    margin-bottom: 2px !important;
+  }
+
+  // --------------------------------------------------
+  // Hover-to-show hints: hide descriptions/hints by
+  // default, reveal on hover or focus. Validation
+  // errors always remain visible.
+  // --------------------------------------------------
+
+  // Collapse the details row (hint area) when idle
+  .v-input:not(.v-input--error) .v-input__details {
+    max-height: 0;
+    min-height: 0 !important;
+    padding: 0 !important;
+    overflow: hidden;
+    transition: max-height 0.15s ease;
+  }
+
+  // Expand on hover or when a child input has focus
+  .v-input:not(.v-input--error):hover .v-input__details,
+  .v-input:not(.v-input--error):focus-within .v-input__details {
+    max-height: 48px;
+    min-height: unset !important;
+    padding: 4px 16px 0 !important;
+    overflow: visible;
   }
 }
 </style>

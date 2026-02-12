@@ -3,6 +3,10 @@
     <h1 class="text-h4 mb-2">
       ADA Bundle Wizard
     </h1>
+    <p v-if="bundleFilename" class="text-subtitle-1 mb-1">
+      <v-icon size="small" class="mr-1">mdi-zip-box-outline</v-icon>
+      {{ bundleFilename }}
+    </p>
     <p class="text-body-1 text-medium-emphasis mb-4">
       Upload a data bundle, review files, fill metadata, and push to ADA.
     </p>
@@ -157,6 +161,10 @@ class BundleWizard extends Vue {
   selectedYamlFile = ''
   isSelectingYaml = false
   yamlPickerError = ''
+
+  get bundleFilename(): string {
+    return this.sessionData?._originalFilename || ''
+  }
 
   get stepItems() {
     const items = [
