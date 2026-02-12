@@ -486,7 +486,7 @@
                         </th>
                         <td>
                           <v-chip
-                            :color="record.status === 'published' ? 'green' : 'grey'"
+                            :color="record.status === 'published' ? 'green' : record.status === 'deprecated' ? 'orange' : 'grey'"
                             size="small"
                           >
                             {{ record.status }}

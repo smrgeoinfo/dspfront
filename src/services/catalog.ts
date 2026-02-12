@@ -25,7 +25,7 @@ export interface UserInfo {
 
 export async function fetchMyRecords(): Promise<CatalogRecord[]> {
   const resp = await axios.get(`${CATALOG_API}/records/`, {
-    params: { mine: 'true', access_token: User.$state.orcidAccessToken },
+    params: { mine: 'true', exclude_status: 'deprecated', access_token: User.$state.orcidAccessToken },
   })
   return resp.data.results
 }
