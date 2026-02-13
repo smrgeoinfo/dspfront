@@ -123,13 +123,13 @@ const _CATEGORY_CT_PROPS = [
  * Reads the injected enum lists from the schema to determine which category
  * the value belongs to.
  */
-function _populateCategoryComponentType(fileDetail: any, fdSchemaProps: any): void {
-  const ct = fileDetail?.componentType?.['@type']
+function _populateCategoryComponentType(item: any, schemaProps: any): void {
+  const ct = item?.componentType?.['@type']
   if (!ct) return
   for (const prop of _CATEGORY_CT_PROPS) {
-    const enumVals: string[] = fdSchemaProps?.[prop]?.enum || []
+    const enumVals: string[] = schemaProps?.[prop]?.enum || []
     if (enumVals.includes(ct)) {
-      fileDetail[prop] = ct
+      item[prop] = ct
       return
     }
   }
@@ -197,13 +197,10 @@ export function populateOnLoad(data: any, schema?: any): void {
       }
 
       // Unwrap cdi:formats_InstanceVariable objects to variable names in physicalMapping
-      const fd = dist.fileDetail
-      if (fd && typeof fd === 'object')
-        _unwrapPhysicalMappingVariables(fd, varLookup)
-      // Also unwrap in hasPart fileDetails
+      _unwrapPhysicalMappingVariables(dist, varLookup)
       for (const part of dist['schema:hasPart'] || []) {
-        if (part?.fileDetail && typeof part.fileDetail === 'object')
-          _unwrapPhysicalMappingVariables(part.fileDetail, varLookup)
+        if (part && typeof part === 'object')
+          _unwrapPhysicalMappingVariables(part, varLookup)
       }
 
       // Populate per-category componentType UI properties from componentType.@type
@@ -213,14 +210,12 @@ export function populateOnLoad(data: any, schema?: any): void {
         const distItemProps = distSchema?.type === 'array'
           ? distSchema?.items?.properties
           : distSchema?.properties
-        const fdSchemaProps = distItemProps?.fileDetail?.properties
-        if (fdSchemaProps) {
-          if (fd && typeof fd === 'object')
-            _populateCategoryComponentType(fd, fdSchemaProps)
-          const hpSchemaProps = distItemProps?.['schema:hasPart']?.items?.properties?.fileDetail?.properties
+        if (distItemProps) {
+          _populateCategoryComponentType(dist, distItemProps)
+          const hpItemProps = distItemProps?.['schema:hasPart']?.items?.properties
           for (const part of dist['schema:hasPart'] || []) {
-            if (part?.fileDetail && typeof part.fileDetail === 'object')
-              _populateCategoryComponentType(part.fileDetail, hpSchemaProps || fdSchemaProps)
+            if (part && typeof part === 'object')
+              _populateCategoryComponentType(part, hpItemProps || distItemProps)
           }
         }
       }
@@ -230,11 +225,11 @@ export function populateOnLoad(data: any, schema?: any): void {
 
 /**
  * Unwrap cdi:formats_InstanceVariable from {"@id": "#abc"} to variable name string
- * in all physicalMapping items within a fileDetail object.
+ * in all physicalMapping items within a distribution or hasPart item.
  * Falls back to the raw @id string if no matching variable name is found.
  */
-function _unwrapPhysicalMappingVariables(fileDetail: any, varLookup: Record<string, string>): void {
-  for (const pm of fileDetail['cdi:hasPhysicalMapping'] || []) {
+function _unwrapPhysicalMappingVariables(item: any, varLookup: Record<string, string>): void {
+  for (const pm of item['cdi:hasPhysicalMapping'] || []) {
     if (pm && typeof pm === 'object') {
       const fiv = pm['cdi:formats_InstanceVariable']
       if (fiv && typeof fiv === 'object' && fiv['@id'])
@@ -321,12 +316,10 @@ export async function populateOnSave(data: any): Promise<void> {
     : data['schema:distribution'] ? [data['schema:distribution']] : []
   for (const dist of distributions) {
     if (dist && typeof dist === 'object') {
-      const fd = dist.fileDetail
-      if (fd && typeof fd === 'object')
-        _wrapPhysicalMappingVariables(fd, nameToId)
+      _wrapPhysicalMappingVariables(dist, nameToId)
       for (const part of dist['schema:hasPart'] || []) {
-        if (part?.fileDetail && typeof part.fileDetail === 'object')
-          _wrapPhysicalMappingVariables(part.fileDetail, nameToId)
+        if (part && typeof part === 'object')
+          _wrapPhysicalMappingVariables(part, nameToId)
       }
     }
   }
@@ -334,12 +327,12 @@ export async function populateOnSave(data: any): Promise<void> {
 
 /**
  * Wrap cdi:formats_InstanceVariable from variable name to {"@id": "#abc"}
- * in all physicalMapping items within a fileDetail object.
+ * in all physicalMapping items within a distribution or hasPart item.
  * Looks up the variable name in nameToId; if the value already looks like
  * an @id (starts with #), uses it directly.
  */
-function _wrapPhysicalMappingVariables(fileDetail: any, nameToId: Record<string, string>): void {
-  for (const pm of fileDetail['cdi:hasPhysicalMapping'] || []) {
+function _wrapPhysicalMappingVariables(item: any, nameToId: Record<string, string>): void {
+  for (const pm of item['cdi:hasPhysicalMapping'] || []) {
     if (pm && typeof pm === 'object') {
       const fiv = pm['cdi:formats_InstanceVariable']
       if (typeof fiv === 'string' && fiv) {
