@@ -5,7 +5,8 @@
     </v-card-title>
     <v-card-text>
       <p class="text-body-1 mb-4">
-        Upload a ZIP bundle containing your data files, or provide a URL to a bundle.
+        Upload a ZIP bundle containing your data files, provide a URL to a bundle,
+        or enter a server directory path.
       </p>
 
       <v-tabs v-model="uploadTab" class="mb-4">
@@ -14,6 +15,9 @@
         </v-tab>
         <v-tab :value="1">
           From URL
+        </v-tab>
+        <v-tab :value="2">
+          Server Directory
         </v-tab>
       </v-tabs>
 
@@ -72,6 +76,18 @@
             persistent-hint
           />
         </v-tabs-window-item>
+
+        <v-tabs-window-item :value="2">
+          <v-text-field
+            v-model="directoryPath"
+            label="Server Directory Path"
+            placeholder="/data/bundles/my-dataset"
+            variant="outlined"
+            density="compact"
+            hint="Absolute path to a directory on the server containing bundle files"
+            persistent-hint
+          />
+        </v-tabs-window-item>
       </v-tabs-window>
 
       <v-alert v-if="error" type="error" variant="outlined" class="mt-4">
@@ -107,11 +123,14 @@ class BundleUploadStep extends Vue {
   isDragging = false
   selectedFile: File | null = null
   bundleUrl = ''
+  directoryPath = ''
   isUploading = false
   error = ''
 
   get canUpload(): boolean {
-    return this.uploadTab === 0 ? !!this.selectedFile : !!this.bundleUrl.trim()
+    if (this.uploadTab === 0) return !!this.selectedFile
+    if (this.uploadTab === 1) return !!this.bundleUrl.trim()
+    return !!this.directoryPath.trim()
   }
 
   triggerFileInput() {
@@ -153,9 +172,15 @@ class BundleUploadStep extends Vue {
   emitUploaded(sessionData: any) {
     // Attach the original filename so downstream steps can use it
     // (bundle_path on the server is a temp file name)
-    const originalFilename = this.uploadTab === 0
-      ? this.selectedFile?.name || ''
-      : this.bundleUrl.trim().replace(/^.*[\\/]/, '').replace(/[?#].*$/, '')
+    let originalFilename = ''
+    if (this.uploadTab === 0) {
+      originalFilename = this.selectedFile?.name || ''
+    } else if (this.uploadTab === 1) {
+      originalFilename = this.bundleUrl.trim().replace(/^.*[\\/]/, '').replace(/[?#].*$/, '')
+    } else {
+      // Use the directory basename for directory uploads
+      originalFilename = this.directoryPath.trim().replace(/[\\/]+$/, '').replace(/^.*[\\/]/, '')
+    }
     return { ...sessionData, _originalFilename: originalFilename }
   }
 
@@ -164,19 +189,34 @@ class BundleUploadStep extends Vue {
     this.error = ''
 
     try {
-      const formData = new FormData()
-      if (this.uploadTab === 0 && this.selectedFile) {
-        formData.append('file', this.selectedFile)
+      let uploadResp
+
+      if (this.uploadTab === 2) {
+        // Server directory — send JSON body
+        uploadResp = await axios.post(
+          `${ADA_BRIDGE_API}/bundle/upload/`,
+          { directory_path: this.directoryPath.trim() },
+          {
+            headers: { 'Content-Type': 'application/json' },
+            params: { access_token: User.$state.orcidAccessToken },
+          },
+        )
       }
       else {
-        formData.append('url', this.bundleUrl.trim())
-      }
+        // File upload or URL — send multipart form data
+        const formData = new FormData()
+        if (this.uploadTab === 0 && this.selectedFile) {
+          formData.append('file', this.selectedFile)
+        }
+        else {
+          formData.append('url', this.bundleUrl.trim())
+        }
 
-      // Step 1: Upload
-      const uploadResp = await axios.post(`${ADA_BRIDGE_API}/bundle/upload/`, formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-        params: { access_token: User.$state.orcidAccessToken },
-      })
+        uploadResp = await axios.post(`${ADA_BRIDGE_API}/bundle/upload/`, formData, {
+          headers: { 'Content-Type': 'multipart/form-data' },
+          params: { access_token: User.$state.orcidAccessToken },
+        })
+      }
 
       const sessionId = uploadResp.data.session_id
 
