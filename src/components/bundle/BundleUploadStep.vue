@@ -78,14 +78,30 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item :value="2">
-          <v-text-field
-            v-model="directoryPath"
-            label="Server Directory Path"
-            placeholder="/data/bundles/my-dataset"
-            variant="outlined"
-            density="compact"
-            hint="Absolute path to a directory on the server containing bundle files"
-            persistent-hint
+          <div class="d-flex align-center ga-2">
+            <v-text-field
+              v-model="directoryPath"
+              label="Server Directory Path"
+              placeholder="/data/bundles/my-dataset"
+              variant="outlined"
+              density="compact"
+              hint="Absolute path to a directory on the server containing bundle files"
+              persistent-hint
+              readonly
+              @click="browseDialogOpen = true"
+            />
+            <v-btn
+              variant="outlined"
+              color="primary"
+              @click="browseDialogOpen = true"
+            >
+              <v-icon start>mdi-folder-search</v-icon>
+              Browse
+            </v-btn>
+          </div>
+          <DirectoryBrowserDialog
+            v-model="browseDialogOpen"
+            @select="onDirectorySelected"
           />
         </v-tabs-window-item>
       </v-tabs-window>
@@ -114,16 +130,18 @@
 import { Component, Emit, toNative, Vue } from 'vue-facing-decorator'
 import axios from 'axios'
 import User from '~/models/user.model'
+import DirectoryBrowserDialog from './DirectoryBrowserDialog.vue'
 
 const ADA_BRIDGE_API = '/api/ada-bridge'
 
-@Component({ name: 'bundle-upload-step' })
+@Component({ name: 'bundle-upload-step', components: { DirectoryBrowserDialog } })
 class BundleUploadStep extends Vue {
   uploadTab = 0
   isDragging = false
   selectedFile: File | null = null
   bundleUrl = ''
   directoryPath = ''
+  browseDialogOpen = false
   isUploading = false
   error = ''
 
@@ -160,6 +178,11 @@ class BundleUploadStep extends Vue {
 
   clearFile() {
     this.selectedFile = null
+  }
+
+  onDirectorySelected(path: string) {
+    this.directoryPath = path
+    this.error = ''
   }
 
   formatSize(bytes: number): string {
