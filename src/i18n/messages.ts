@@ -84,6 +84,130 @@ export const messages = {
             name: `Visible-Near-Mid Infrared Spectroscopy (VNMIR)`,
             description: `Metadata for visible, near-infrared, and mid-infrared spectroscopy datasets.`,
           },
+          adaAIVA: {
+            name: `AI-driven Visual Analysis (AIVA)`,
+            description: `Metadata for AI-driven visual analysis imaging datasets.`,
+          },
+          adaAMS: {
+            name: `Accelerator Mass Spectrometry (AMS)`,
+            description: `Metadata for accelerator mass spectrometry isotope analysis datasets.`,
+          },
+          adaARGT: {
+            name: `Argon Geochronology and Thermochronology (ARGT)`,
+            description: `Metadata for argon geochronology and thermochronology dating analysis datasets.`,
+          },
+          adaDSC: {
+            name: `Differential Scanning Calorimetry (DSC)`,
+            description: `Metadata for differential scanning calorimetry thermal analysis datasets.`,
+          },
+          adaEAIRMS: {
+            name: `Elemental Analysis - Isotope Ratio Mass Spectrometry (EA-IRMS)`,
+            description: `Metadata for elemental analysis coupled with isotope ratio mass spectrometry datasets.`,
+          },
+          adaFTICRMS: {
+            name: `Fourier Transform Ion Cyclotron Resonance Mass Spectrometry (FTICR-MS)`,
+            description: `Metadata for Fourier transform ion cyclotron resonance mass spectrometry datasets.`,
+          },
+          adaGCMS: {
+            name: `Gas Chromatography Mass Spectrometry (GC-MS)`,
+            description: `Metadata for gas chromatography mass spectrometry analysis datasets.`,
+          },
+          adaGPYC: {
+            name: `Gas Pycnometry (GPYC)`,
+            description: `Metadata for gas pycnometry density measurement datasets.`,
+          },
+          adaIC: {
+            name: `Ion Chromatography (IC)`,
+            description: `Metadata for ion chromatography analysis datasets.`,
+          },
+          adaICPOES: {
+            name: `Inductively Coupled Plasma Optical Emission Spectrometry (ICP-OES)`,
+            description: `Metadata for inductively coupled plasma optical emission spectrometry datasets.`,
+          },
+          adaL2MS: {
+            name: `Two-Step Laser Mass Spectrometry (L2MS)`,
+            description: `Metadata for two-step laser desorption/ionization mass spectrometry datasets.`,
+          },
+          adaLAF: {
+            name: `Laser-Assisted Fluorination (LAF)`,
+            description: `Metadata for laser-assisted fluorination isotope analysis datasets.`,
+          },
+          adaLCMS: {
+            name: `Liquid Chromatography Mass Spectrometry (LC-MS)`,
+            description: `Metadata for liquid chromatography mass spectrometry analysis datasets.`,
+          },
+          adaLIT: {
+            name: `Lock-In Thermography (LIT)`,
+            description: `Metadata for lock-in thermography imaging and data collection datasets.`,
+          },
+          adaNGNSMS: {
+            name: `Noble Gas and Nitrogen Static Mass Spectrometry (NG-NS-MS)`,
+            description: `Metadata for noble gas and nitrogen static mass spectrometry analysis datasets.`,
+          },
+          adaNanoIR: {
+            name: `Nano-Infrared Spectroscopy (NanoIR)`,
+            description: `Metadata for nano-infrared spectroscopy and photothermal imaging datasets.`,
+          },
+          adaNanoSIMS: {
+            name: `Nanoscale Secondary Ion Mass Spectrometry (NanoSIMS)`,
+            description: `Metadata for nanoscale secondary ion mass spectrometry imaging and analysis datasets.`,
+          },
+          adaPSFD: {
+            name: `Particle Size-Frequency Distribution (PSFD)`,
+            description: `Metadata for particle size-frequency distribution analysis datasets.`,
+          },
+          adaQRIS: {
+            name: `Quantitative Reflectance Imaging Spectroscopy (QRIS)`,
+            description: `Metadata for quantitative reflectance imaging spectroscopy datasets.`,
+          },
+          adaRAMAN: {
+            name: `Raman Spectroscopy (RAMAN)`,
+            description: `Metadata for Raman spectroscopy vibrational analysis datasets.`,
+          },
+          adaRITOFNGMS: {
+            name: `Resonance Ionization Time-of-Flight Noble Gas Mass Spectrometry (RI-TOF-NGMS)`,
+            description: `Metadata for resonance ionization time-of-flight noble gas mass spectrometry datasets.`,
+          },
+          adaSEM: {
+            name: `Scanning Electron Microscopy (SEM)`,
+            description: `Metadata for scanning electron microscopy imaging and analysis datasets.`,
+          },
+          adaSIMS: {
+            name: `Secondary Ion Mass Spectrometry (SIMS)`,
+            description: `Metadata for secondary ion mass spectrometry analysis datasets.`,
+          },
+          adaSLS: {
+            name: `Structured Light Scanning (SLS)`,
+            description: `Metadata for structured light scanning 3D surface reconstruction datasets.`,
+          },
+          adaSVRUEC: {
+            name: `Seismic Velocities and Rock Ultrasonic Elastic Constants (SV-RUEC)`,
+            description: `Metadata for seismic velocities and rock ultrasonic elastic constants measurement datasets.`,
+          },
+          adaTEM: {
+            name: `Transmission Electron Microscopy (TEM)`,
+            description: `Metadata for transmission electron microscopy imaging and spectroscopy datasets.`,
+          },
+          adaToFSIMS: {
+            name: `Time-of-Flight Secondary Ion Mass Spectrometry (ToF-SIMS)`,
+            description: `Metadata for time-of-flight secondary ion mass spectrometry surface analysis datasets.`,
+          },
+          adaUVFM: {
+            name: `Ultraviolet Fluorescence Microscopy (UVFM)`,
+            description: `Metadata for ultraviolet fluorescence microscopy imaging datasets.`,
+          },
+          adaVLM: {
+            name: `Visible Light Microscopy (VLM)`,
+            description: `Metadata for visible light microscopy imaging datasets.`,
+          },
+          adaXANES: {
+            name: `X-ray Absorption Near Edge Structure (XANES)`,
+            description: `Metadata for X-ray absorption near edge structure spectroscopy datasets.`,
+          },
+          adaXCT: {
+            name: `X-ray Computed Tomography (XCT)`,
+            description: `Metadata for X-ray computed tomography 3D imaging datasets.`,
+          },
           CDIFxas: {
             name: `X-Ray Absorption Spectroscopy (XAS)`,
             description: `CDIF metadata for XAS datasets, including X-ray source, monochromator, sample, absorption edge, and target element.`,
