@@ -549,20 +549,19 @@ class MetadataFormStep extends Vue {
         part['schema:description'] = file.inspection.description
       }
 
-      // Build fileDetail with physical mapping for tabular/structured data
+      // Build physical mapping for tabular/structured data (flat on hasPart item)
       if (file.inspection?.columns?.length) {
-        const fd: any = {}
         // CSV/delimited metadata
         if (file.inspection.delimiter) {
-          fd['csvw:delimiter'] = file.inspection.delimiter
-          fd['csvw:header'] = true
-          fd['csvw:headerRowCount'] = 1
+          part['csvw:delimiter'] = file.inspection.delimiter
+          part['csvw:header'] = true
+          part['csvw:headerRowCount'] = 1
         }
-        if (file.inspection.row_count != null) fd['countRows'] = file.inspection.row_count
-        fd['countColumns'] = file.inspection.columns.length
+        if (file.inspection.row_count != null) part['countRows'] = file.inspection.row_count
+        part['countColumns'] = file.inspection.columns.length
 
         // Physical mapping: one entry per column, linking index → variable name
-        fd['cdi:hasPhysicalMapping'] = file.inspection.columns.map((col: any) => {
+        part['cdi:hasPhysicalMapping'] = file.inspection.columns.map((col: any) => {
           const label = typeof col === 'string' ? col : (col.label || col.name)
           const entry: any = {
             'cdi:index': col.index ?? 0,
@@ -572,13 +571,11 @@ class MetadataFormStep extends Vue {
           return entry
         })
 
-        part['fileDetail'] = fd
         part['_showPhysicalStructure'] = true
       }
       // HDF5/NetCDF variables → physical mapping
       else if (file.inspection?.variables?.length) {
-        const fd: any = {}
-        fd['cdi:hasPhysicalMapping'] = file.inspection.variables.map((v: any, idx: number) => {
+        part['cdi:hasPhysicalMapping'] = file.inspection.variables.map((v: any, idx: number) => {
           const entry: any = {
             'cdi:index': idx,
             'cdi:formats_InstanceVariable': v.name,
@@ -588,7 +585,6 @@ class MetadataFormStep extends Vue {
           return entry
         })
 
-        part['fileDetail'] = fd
         part['_showPhysicalStructure'] = true
       }
 
