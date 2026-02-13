@@ -6,7 +6,7 @@
     <v-card-text>
       <p class="text-body-1 mb-4">
         Upload a ZIP bundle containing your data files, provide a URL to a bundle,
-        or enter a server directory path.
+        or select a local folder.
       </p>
 
       <v-tabs v-model="uploadTab" class="mb-4">
@@ -17,7 +17,7 @@
           From URL
         </v-tab>
         <v-tab :value="2">
-          Server Directory
+          Local Directory
         </v-tab>
       </v-tabs>
 
@@ -78,31 +78,50 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item :value="2">
-          <div class="d-flex align-center ga-2">
-            <v-text-field
-              v-model="directoryPath"
-              label="Server Directory Path"
-              placeholder="/data/bundles/my-dataset"
-              variant="outlined"
-              density="compact"
-              hint="Absolute path to a directory on the server containing bundle files"
-              persistent-hint
-              readonly
-              @click="browseDialogOpen = true"
-            />
+          <div
+            class="drop-zone pa-8 text-center"
+            :class="{ 'drop-zone--active': isDragging }"
+            @dragenter.prevent="isDragging = true"
+            @dragover.prevent="isDragging = true"
+            @dragleave.prevent="isDragging = false"
+            @drop.prevent="onDropDirectory"
+          >
+            <v-icon size="48" color="primary" class="mb-2">
+              mdi-folder-upload
+            </v-icon>
+            <p class="text-body-1">
+              Select a folder containing your data files
+            </p>
             <v-btn
               variant="outlined"
               color="primary"
-              @click="browseDialogOpen = true"
+              class="mt-2"
+              @click="triggerDirectoryInput"
             >
-              <v-icon start>mdi-folder-search</v-icon>
-              Browse
+              Browse Folder
             </v-btn>
+            <input
+              ref="directoryInput"
+              type="file"
+              webkitdirectory
+              directory
+              style="display: none"
+              @change="onDirectorySelected"
+            >
           </div>
-          <DirectoryBrowserDialog
-            v-model="browseDialogOpen"
-            @select="onDirectorySelected"
-          />
+
+          <div v-if="selectedDirectoryFiles.length" class="mt-4">
+            <div class="d-flex align-center mb-2">
+              <v-icon class="mr-2">mdi-folder-outline</v-icon>
+              <span class="text-body-2 font-weight-medium">{{ directoryName }}</span>
+              <span class="text-body-2 ml-2 text-medium-emphasis">
+                ({{ selectedDirectoryFiles.length }} files, {{ formatSize(directoryTotalSize) }})
+              </span>
+              <v-btn icon size="small" variant="text" class="ml-2" @click="clearDirectory">
+                <v-icon>mdi-close</v-icon>
+              </v-btn>
+            </div>
+          </div>
         </v-tabs-window-item>
       </v-tabs-window>
 
@@ -129,30 +148,38 @@
 <script lang="ts">
 import { Component, Emit, toNative, Vue } from 'vue-facing-decorator'
 import axios from 'axios'
+import JSZip from 'jszip'
 import User from '~/models/user.model'
-import DirectoryBrowserDialog from './DirectoryBrowserDialog.vue'
 
 const ADA_BRIDGE_API = '/api/ada-bridge'
 
-@Component({ name: 'bundle-upload-step', components: { DirectoryBrowserDialog } })
+@Component({ name: 'bundle-upload-step' })
 class BundleUploadStep extends Vue {
   uploadTab = 0
   isDragging = false
   selectedFile: File | null = null
   bundleUrl = ''
-  directoryPath = ''
-  browseDialogOpen = false
+  selectedDirectoryFiles: File[] = []
+  directoryName = ''
   isUploading = false
   error = ''
+
+  get directoryTotalSize(): number {
+    return this.selectedDirectoryFiles.reduce((sum, f) => sum + f.size, 0)
+  }
 
   get canUpload(): boolean {
     if (this.uploadTab === 0) return !!this.selectedFile
     if (this.uploadTab === 1) return !!this.bundleUrl.trim()
-    return !!this.directoryPath.trim()
+    return this.selectedDirectoryFiles.length > 0
   }
 
   triggerFileInput() {
     (this.$refs.fileInput as HTMLInputElement).click()
+  }
+
+  triggerDirectoryInput() {
+    (this.$refs.directoryInput as HTMLInputElement).click()
   }
 
   onFileSelected(event: Event) {
@@ -162,6 +189,18 @@ class BundleUploadStep extends Vue {
       this.selectedFile = file
       this.error = ''
     }
+  }
+
+  onDirectorySelected(event: Event) {
+    const input = event.target as HTMLInputElement
+    const files = input.files
+    if (!files || files.length === 0) return
+
+    this.selectedDirectoryFiles = Array.from(files)
+    // Extract the top-level directory name from webkitRelativePath (e.g. "mydir/sub/file.txt")
+    const firstPath = (files[0] as any).webkitRelativePath || files[0].name
+    this.directoryName = firstPath.split('/')[0] || 'selected folder'
+    this.error = ''
   }
 
   onDrop(event: DragEvent) {
@@ -176,13 +215,72 @@ class BundleUploadStep extends Vue {
     }
   }
 
+  async onDropDirectory(event: DragEvent) {
+    this.isDragging = false
+    const items = event.dataTransfer?.items
+    if (!items || items.length === 0) return
+
+    // Try to read directory entries via DataTransferItem.webkitGetAsEntry
+    const firstItem = items[0]
+    const entry = firstItem.webkitGetAsEntry?.()
+    if (entry?.isDirectory) {
+      const files = await this._readDirectoryEntry(entry as FileSystemDirectoryEntry)
+      if (files.length > 0) {
+        this.selectedDirectoryFiles = files
+        this.directoryName = entry.name
+        this.error = ''
+        return
+      }
+    }
+    this.error = 'Please drop a folder, or use the Browse Folder button.'
+  }
+
+  /** Recursively read all files from a dropped directory entry. */
+  async _readDirectoryEntry(dirEntry: FileSystemDirectoryEntry, basePath = ''): Promise<File[]> {
+    const reader = dirEntry.createReader()
+    const files: File[] = []
+
+    const readBatch = (): Promise<FileSystemEntry[]> =>
+      new Promise((resolve, reject) => reader.readEntries(resolve, reject))
+
+    let entries: FileSystemEntry[] = []
+    // readEntries may return results in batches
+    let batch = await readBatch()
+    while (batch.length > 0) {
+      entries = entries.concat(batch)
+      batch = await readBatch()
+    }
+
+    for (const e of entries) {
+      if (e.name.startsWith('.')) continue
+      if (e.isFile) {
+        const file = await new Promise<File>((resolve, reject) =>
+          (e as FileSystemFileEntry).file(resolve, reject),
+        )
+        // Attach relative path for zipping
+        const relativePath = basePath ? `${basePath}/${e.name}` : e.name
+        Object.defineProperty(file, '_relativePath', { value: relativePath })
+        files.push(file)
+      }
+      else if (e.isDirectory) {
+        const subPath = basePath ? `${basePath}/${e.name}` : e.name
+        const subFiles = await this._readDirectoryEntry(e as FileSystemDirectoryEntry, subPath)
+        files.push(...subFiles)
+      }
+    }
+    return files
+  }
+
   clearFile() {
     this.selectedFile = null
   }
 
-  onDirectorySelected(path: string) {
-    this.directoryPath = path
-    this.error = ''
+  clearDirectory() {
+    this.selectedDirectoryFiles = []
+    this.directoryName = ''
+    // Reset the input so re-selecting the same folder triggers change
+    const input = this.$refs.directoryInput as HTMLInputElement
+    if (input) input.value = ''
   }
 
   formatSize(bytes: number): string {
@@ -193,18 +291,30 @@ class BundleUploadStep extends Vue {
 
   @Emit('uploaded')
   emitUploaded(sessionData: any) {
-    // Attach the original filename so downstream steps can use it
-    // (bundle_path on the server is a temp file name)
     let originalFilename = ''
     if (this.uploadTab === 0) {
       originalFilename = this.selectedFile?.name || ''
     } else if (this.uploadTab === 1) {
       originalFilename = this.bundleUrl.trim().replace(/^.*[\\/]/, '').replace(/[?#].*$/, '')
     } else {
-      // Use the directory basename for directory uploads
-      originalFilename = this.directoryPath.trim().replace(/[\\/]+$/, '').replace(/^.*[\\/]/, '')
+      originalFilename = this.directoryName || 'directory'
     }
     return { ...sessionData, _originalFilename: originalFilename }
+  }
+
+  /** Zip the selected directory files client-side and return a File object. */
+  async _zipDirectoryFiles(): Promise<File> {
+    const zip = new JSZip()
+    for (const file of this.selectedDirectoryFiles) {
+      // Use webkitRelativePath (from input) or _relativePath (from drag-drop)
+      const relativePath = (file as any).webkitRelativePath || (file as any)._relativePath || file.name
+      // Strip the top-level directory name so ZIP contents match the folder's contents
+      const parts = relativePath.split('/')
+      const innerPath = parts.length > 1 ? parts.slice(1).join('/') : parts[0]
+      zip.file(innerPath, file)
+    }
+    const blob = await zip.generateAsync({ type: 'blob' })
+    return new File([blob], `${this.directoryName}.zip`, { type: 'application/zip' })
   }
 
   async onUpload() {
@@ -212,34 +322,24 @@ class BundleUploadStep extends Vue {
     this.error = ''
 
     try {
-      let uploadResp
+      const formData = new FormData()
 
       if (this.uploadTab === 2) {
-        // Server directory — send JSON body
-        uploadResp = await axios.post(
-          `${ADA_BRIDGE_API}/bundle/upload/`,
-          { directory_path: this.directoryPath.trim() },
-          {
-            headers: { 'Content-Type': 'application/json' },
-            params: { access_token: User.$state.orcidAccessToken },
-          },
-        )
+        // Local directory — zip client-side, then upload as file
+        const zipFile = await this._zipDirectoryFiles()
+        formData.append('file', zipFile)
+      }
+      else if (this.uploadTab === 0 && this.selectedFile) {
+        formData.append('file', this.selectedFile)
       }
       else {
-        // File upload or URL — send multipart form data
-        const formData = new FormData()
-        if (this.uploadTab === 0 && this.selectedFile) {
-          formData.append('file', this.selectedFile)
-        }
-        else {
-          formData.append('url', this.bundleUrl.trim())
-        }
-
-        uploadResp = await axios.post(`${ADA_BRIDGE_API}/bundle/upload/`, formData, {
-          headers: { 'Content-Type': 'multipart/form-data' },
-          params: { access_token: User.$state.orcidAccessToken },
-        })
+        formData.append('url', this.bundleUrl.trim())
       }
+
+      const uploadResp = await axios.post(`${ADA_BRIDGE_API}/bundle/upload/`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        params: { access_token: User.$state.orcidAccessToken },
+      })
 
       const sessionId = uploadResp.data.session_id
 
