@@ -103,10 +103,14 @@
         Metadata Loaded — Select Profile to Edit
       </div>
 
+      <v-alert v-if="detectedInfo" type="info" variant="tonal" density="compact" class="mb-4" style="max-width: 30rem">
+        Profile auto-detected from {{ detectedInfo }}
+      </v-alert>
+
       <v-select
         v-model="selectedProfile"
-        :items="profiles"
-        item-title="name"
+        :items="profileItems"
+        item-title="label"
         item-value="name"
         label="Metadata Profile"
         variant="outlined"
@@ -153,6 +157,20 @@ class UpdateMetadata extends Vue {
   profiles: { name: string }[] = []
   selectedProfile = ''
   isLoadingProfiles = false
+  detectedInfo = ''
+
+  get profileItems() {
+    return this.profiles.map(p => ({
+      name: p.name,
+      label: this.getProfileLabel(p.name),
+    }))
+  }
+
+  getProfileLabel(name: string): string {
+    const key = `metadata.ada.profiles.${name}.name`
+    const translated = this.$t(key) as string
+    return translated !== key ? translated : name
+  }
 
   async created() {
     this.isLoadingProfiles = true
@@ -178,6 +196,7 @@ class UpdateMetadata extends Vue {
         params: { doi: this.doi.trim(), access_token: User.$state.orcidAccessToken },
       })
       this.loadedJsonld = resp.data.jsonld
+      await this.detectProfile()
     }
     catch (e: any) {
       console.error('DOI lookup failed:', e)
@@ -199,10 +218,11 @@ class UpdateMetadata extends Vue {
 
     this.selectedFileName = file.name
     const reader = new FileReader()
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
         this.loadedJsonld = JSON.parse(e.target?.result as string)
         this.error = ''
+        await this.detectProfile()
       }
       catch (err) {
         this.error = 'Failed to parse JSON file.'
@@ -222,6 +242,7 @@ class UpdateMetadata extends Vue {
       const resp = await axios.get(this.metadataUrl.trim())
       if (typeof resp.data === 'object') {
         this.loadedJsonld = resp.data
+        await this.detectProfile()
       }
       else {
         this.error = 'URL did not return valid JSON.'
@@ -233,6 +254,28 @@ class UpdateMetadata extends Vue {
     }
     finally {
       this.isFetching = false
+    }
+  }
+
+  async detectProfile() {
+    this.detectedInfo = ''
+    if (!this.loadedJsonld) return
+    try {
+      const resp = await axios.post(`${CATALOG_API}/detect-profile/`, {
+        jsonld: this.loadedJsonld,
+      })
+      if (resp.data.profile) {
+        this.selectedProfile = resp.data.profile
+        const sourceMap: Record<string, string> = {
+          conformsTo: 'conformsTo URI',
+          additionalType: 'schema:additionalType',
+          termCode: 'measurement technique code',
+        }
+        this.detectedInfo = sourceMap[resp.data.source] || resp.data.source
+      }
+    }
+    catch (e) {
+      console.warn('Profile detection failed:', e)
     }
   }
 
