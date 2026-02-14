@@ -1,6 +1,6 @@
 <template>
   <v-container class="cz-user-guide">
-    <div class="markdown-body" v-html="renderedHtml" />
+    <div ref="markdownEl" class="markdown-body" v-html="renderedHtml" @click="handleAnchorClick" />
   </v-container>
 </template>
 
@@ -11,6 +11,29 @@ import guideRaw from '~/assets/user-guide.md?raw'
 
 const md = new MarkdownIt({ html: true, linkify: true })
 
+// GitHub-style heading slug: lowercase, strip non-alphanumeric except spaces/hyphens, spaces→hyphens
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/<[^>]*>/g, '')
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .trim()
+}
+
+md.renderer.rules.heading_open = (tokens, idx, options, _env, self) => {
+  const token = tokens[idx]
+  const contentToken = tokens[idx + 1]
+  if (contentToken?.children) {
+    const text = contentToken.children
+      .filter(t => t.type === 'text' || t.type === 'code_inline')
+      .map(t => t.content)
+      .join('')
+    token.attrSet('id', slugify(text))
+  }
+  return self.renderToken(tokens, idx, options)
+}
+
 @Component({
   name: 'cz-user-guide',
   components: {},
@@ -18,6 +41,30 @@ const md = new MarkdownIt({ html: true, linkify: true })
 class CzUserGuide extends Vue {
   get renderedHtml() {
     return md.render(guideRaw)
+  }
+
+  handleAnchorClick(e: MouseEvent) {
+    const anchor = (e.target as HTMLElement).closest('a')
+    if (!anchor) return
+    const href = anchor.getAttribute('href')
+    if (!href?.startsWith('#')) return
+
+    e.preventDefault()
+    const target = document.getElementById(href.slice(1))
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth' })
+      history.replaceState(null, '', href)
+    }
+  }
+
+  mounted() {
+    const hash = window.location.hash
+    if (hash) {
+      this.$nextTick(() => {
+        const target = document.getElementById(hash.slice(1))
+        if (target) target.scrollIntoView({ behavior: 'smooth' })
+      })
+    }
   }
 }
 export default toNative(CzUserGuide)
