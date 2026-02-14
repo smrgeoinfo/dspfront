@@ -34,7 +34,7 @@ declare module 'vue' {
     'Cz.repositorySubmitCard': typeof import('./components/submit/cz.repository-submit-card.vue')['default']
     'Cz.resources': typeof import('./components/resources/cz.resources.vue')['default']
     'Cz.submit': typeof import('./components/submit/cz.submit.vue')['default']
-    DirectoryBrowserDialog: typeof import('./components/bundle/DirectoryBrowserDialog.vue')['default']
+    'Cz.userGuide': typeof import('./components/user-guide/cz.user-guide.vue')['default']
     FileReviewStep: typeof import('./components/bundle/FileReviewStep.vue')['default']
     'Geodat.adaProfileForm': typeof import('./components/metadata/geodat.ada-profile-form.vue')['default']
     'Geodat.adaSelectType': typeof import('./components/metadata/geodat.ada-select-type.vue')['default']

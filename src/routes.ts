@@ -11,6 +11,7 @@ import CzAccount from '~/components/profile/cz.account.vue'
 import CzAuthorizedRepositories from '~/components/profile/cz.authorized-repositories.vue'
 import CzProfile from '~/components/profile/cz.profile.vue'
 import CzQuickStartGuide from '~/components/quick-start-guide/cz.quick-start-guide.vue'
+import CzUserGuide from '~/components/user-guide/cz.user-guide.vue'
 import CzRecomendationsQuestionnaire from '~/components/recommendations/cz.recommendations-questionnaire.vue'
 import CzRegisterDataset from '~/components/register-dataset/cz.register-dataset.vue'
 import CzResources from '~/components/resources/cz.resources.vue'
@@ -110,6 +111,17 @@ export const routes: RouteRecordRaw[] = [
     },
     components: {
       content: CzQuickStartGuide,
+      footer: CzFooter,
+    },
+  },
+  {
+    name: 'user-guide',
+    path: '/user-guide',
+    meta: {
+      title: 'User Guide',
+    },
+    components: {
+      content: CzUserGuide,
       footer: CzFooter,
     },
   },

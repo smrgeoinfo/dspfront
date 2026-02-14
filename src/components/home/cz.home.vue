@@ -88,6 +88,13 @@
       </v-row>
     </section>
 
+    <div class="text-center mb-2 mt-n2">
+      <p class="font-weight-light text-subtitle-1">
+        For complete instructions on using this site, see the
+        <router-link to="/user-guide">User Guide</router-link>.
+      </p>
+    </div>
+
     <v-divider />
 
     <section class="d-flex align-center justify-center flex-column flex-lg-row">

@@ -290,6 +290,14 @@ class App extends Vue {
       },
     },
     {
+      attrs: { to: '/user-guide' },
+      label: 'User Guide',
+      icon: 'mdi-book-open-page-variant',
+      isActive: () => {
+        return this.route?.name === 'user-guide'
+      },
+    },
+    {
       attrs: { to: '/submit' },
       label: 'Submit Data',
       icon: 'mdi-book-plus',
